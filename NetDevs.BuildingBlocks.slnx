@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="NetDevs.Cqrs.Abstractions/NetDevs.Cqrs.Abstractions.csproj" Id="67fe27aa-adbf-41ca-be8f-52fd559bbf2a" />
+    <Project Path="NetDevs.Cqrs/NetDevs.Cqrs.csproj" Id="bb72b896-b0ce-4144-b237-76659755199c" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>
