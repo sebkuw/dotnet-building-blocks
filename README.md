@@ -2,7 +2,7 @@
 
 Reusable .NET building blocks for Clean Architecture applications.
 
-This repository contains small, focused packages that keep application and domain code independent from infrastructure concerns. The current packages cover domain entities, auditing contracts, CQRS contracts, CQRS handler registration for Microsoft dependency injection, EF Core auditing and API exception processing.
+This repository contains small, focused packages that keep application and domain code independent from infrastructure concerns. The current packages cover domain entities, auditing contracts, CQRS contracts, CQRS handler registration for Microsoft dependency injection, EF Core auditing, API exception processing and dynamic query processing.
 
 ## Table of Contents
 
@@ -13,6 +13,7 @@ This repository contains small, focused packages that keep application and domai
 - [NetDevs.Cqrs](#netdevscqrs)
 - [NetDevs.EntityFrameworkCore.Auditing](#netdevsentityframeworkcoreauditing)
 - [NetDevs.ExceptionProcessor](#netdevsexceptionprocessor)
+- [NetDevs.QueryableProcessor](#netdevsqueryableprocessor)
 - [Build](#build)
 - [Tests](#tests)
 - [License](#license)
@@ -26,6 +27,7 @@ This repository contains small, focused packages that keep application and domai
 | `NetDevs.Cqrs` | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
 | `NetDevs.EntityFrameworkCore.Auditing` | EF Core `SaveChangesInterceptor` for automatic audit metadata. |
 | `NetDevs.ExceptionProcessor` | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
+| `NetDevs.QueryableProcessor` | Dynamic `IQueryable` filtering, sorting, pagination and response metadata helpers. |
 
 ## Repository Structure
 
@@ -36,11 +38,13 @@ src/
   NetDevs.Cqrs/
   NetDevs.EntityFrameworkCore.Auditing/
   NetDevs.ExceptionProcessor/
+  NetDevs.QueryableProcessor/
 tests/
   NetDevs.Domain.Abstractions.Tests/
   NetDevs.Cqrs.Tests/
   NetDevs.EntityFrameworkCore.Auditing.Tests/
   NetDevs.ExceptionProcessor.Tests/
+  NetDevs.QueryableProcessor.Tests/
 ```
 
 ## NetDevs.Domain.Abstractions
@@ -476,6 +480,116 @@ public sealed class DuplicateEmailException : BaseException
 - `ExceptionResponse.Timestamp` is set in UTC when the response is created.
 - `GlobalExceptionMiddleware` writes JSON with camel-case property names and includes the correlation ID in both the response body and header.
 
+## NetDevs.QueryableProcessor
+
+### Purpose
+
+`NetDevs.QueryableProcessor` applies filtering, sorting, pagination and projection to `IQueryable<T>` sources. It is useful for API list endpoints that accept query options and should return consistent pagination metadata.
+
+### Installation
+
+```bash
+dotnet add package NetDevs.QueryableProcessor
+```
+
+### Included Types
+
+- `RequestDto`
+- `FilterCondition`
+- `FilterOperation`
+- `PaginationOptions`
+- `PaginationResponse<T>`
+- `ApplyFilters`
+- `SortBy`
+- `Paginate`
+- `SolveRequest`
+
+### Request Model
+
+Create a request with optional filters and sorting plus required pagination options:
+
+```csharp
+using NetDevs.QueryableProcessor.Enums;
+using NetDevs.QueryableProcessor.Models;
+
+var request = new RequestDto
+{
+    SortParam = "desc_CreatedAt",
+    Filters =
+    [
+        new FilterCondition
+        {
+            PropertyPath = "Status",
+            Operation = FilterOperation.Equal,
+            Value = "Published"
+        },
+        new FilterCondition
+        {
+            PropertyPath = "Name",
+            Operation = FilterOperation.Contains,
+            Value = "api"
+        }
+    ],
+    PaginationOptions = new PaginationOptions(pageNumber: 1, pageSize: 20)
+};
+```
+
+### Process an EF Core Query
+
+Use `SolveRequest` to apply filters, sorting, pagination and projection in one call:
+
+```csharp
+using NetDevs.QueryableProcessor.Solvers;
+
+PaginationResponse<ArticleListItem> response = await dbContext.Articles
+    .SolveRequest(
+        request,
+        article => new ArticleListItem(
+            article.Id,
+            article.Title,
+            article.CreatedAt),
+        cancellationToken);
+```
+
+The response contains the page data plus `TotalItems`, `TotalPages`, `PageNumber`, `PageSize`, `HasNextPage` and `HasPreviousPage`.
+
+### Supported Filters
+
+`FilterOperation` supports:
+
+- `Equal`
+- `NotEqual`
+- `GreaterThan`
+- `LessThan`
+- `GreaterThanOrEqual`
+- `LessThanOrEqual`
+- `Contains`
+- `StartsWith`
+- `EndsWith`
+- `In`
+- `NotIn`
+
+String operations work on string properties. `In` and `NotIn` expect a collection value, for example `new[] { 1, 2, 3 }`.
+
+### Sorting
+
+Use `asc_` or `desc_` prefixes:
+
+```csharp
+query = query.SortBy("asc_Name");
+query = query.SortBy("desc_Category.Name");
+```
+
+Nested property paths are supported. If the sort parameter is empty or does not use a supported prefix, the original query is returned unchanged.
+
+### Notes
+
+- `PaginationOptions` defaults to page 1 and page size 10.
+- Page numbers are 1-based.
+- Page size is limited to 100.
+- `SolveRequest` counts matching items before pagination.
+- Filters are combined with logical `AND`.
+
 ## Build
 
 ```bash
@@ -499,7 +613,9 @@ The test projects cover:
 - EF Core creation and update audit behavior,
 - exception response mapping,
 - global exception middleware responses,
-- correlation ID middleware behavior.
+- correlation ID middleware behavior,
+- dynamic query filtering, sorting and pagination,
+- full query request processing with EF Core InMemory.
 
 ## License
 
