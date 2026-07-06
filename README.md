@@ -2,7 +2,7 @@
 
 Reusable .NET building blocks for Clean Architecture applications.
 
-This repository contains small, focused packages that keep application and domain code independent from infrastructure concerns. The current packages cover domain entities, auditing contracts, CQRS contracts and CQRS handler registration for Microsoft dependency injection.
+This repository contains small, focused packages that keep application and domain code independent from infrastructure concerns. The current packages cover domain entities, auditing contracts, CQRS contracts, CQRS handler registration for Microsoft dependency injection, EF Core auditing and API exception processing.
 
 ## Table of Contents
 
@@ -12,6 +12,7 @@ This repository contains small, focused packages that keep application and domai
 - [NetDevs.Cqrs.Abstractions](#netdevscqrsabstractions)
 - [NetDevs.Cqrs](#netdevscqrs)
 - [NetDevs.EntityFrameworkCore.Auditing](#netdevsentityframeworkcoreauditing)
+- [NetDevs.ExceptionProcessor](#netdevsexceptionprocessor)
 - [Build](#build)
 - [Tests](#tests)
 - [License](#license)
@@ -24,6 +25,7 @@ This repository contains small, focused packages that keep application and domai
 | `NetDevs.Cqrs.Abstractions` | Dependency-free CQRS contracts for commands, queries and handlers. |
 | `NetDevs.Cqrs` | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
 | `NetDevs.EntityFrameworkCore.Auditing` | EF Core `SaveChangesInterceptor` for automatic audit metadata. |
+| `NetDevs.ExceptionProcessor` | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
 
 ## Repository Structure
 
@@ -33,10 +35,12 @@ src/
   NetDevs.Cqrs.Abstractions/
   NetDevs.Cqrs/
   NetDevs.EntityFrameworkCore.Auditing/
+  NetDevs.ExceptionProcessor/
 tests/
   NetDevs.Domain.Abstractions.Tests/
   NetDevs.Cqrs.Tests/
   NetDevs.EntityFrameworkCore.Auditing.Tests/
+  NetDevs.ExceptionProcessor.Tests/
 ```
 
 ## NetDevs.Domain.Abstractions
@@ -353,6 +357,125 @@ public sealed class Customer : AuditableGuidEntity
 - You can replace `IDateTimeProvider` in tests or applications that need deterministic time.
 - The interceptor only touches tracked entities in `Added` or `Modified` state.
 
+## NetDevs.ExceptionProcessor
+
+### Purpose
+
+`NetDevs.ExceptionProcessor` converts exceptions into consistent JSON API responses. It includes a base exception contract for application-specific errors, ready-made exception types, NLog-based exception logging, a global exception middleware and a correlation ID middleware.
+
+### Installation
+
+```bash
+dotnet add package NetDevs.ExceptionProcessor
+```
+
+### Included Types
+
+- `BaseException`
+- `ExceptionResponse`
+- `IExceptionManager`
+- `ExceptionManager`
+- `IExceptionLogger`
+- `ExceptionLogger`
+- `GlobalExceptionMiddleware`
+- `TraceIdMiddleware`
+- built-in custom exceptions such as `ValidationException`, `ObjectNotFoundException`, `DatabaseException`, `TimeoutException` and `OperationFailedException`
+
+### Register Services
+
+Register the exception manager and logger in the application composition root:
+
+```csharp
+using NetDevs.ExceptionProcessor;
+using NetDevs.ExceptionProcessor.Loggers;
+
+builder.Services.AddScoped<IExceptionManager, ExceptionManager>();
+builder.Services.AddSingleton<IExceptionLogger, ExceptionLogger>();
+```
+
+Initialize the NLog logger from configuration during startup:
+
+```csharp
+using NetDevs.ExceptionProcessor.Loggers;
+
+ExceptionLogger.Initialize(builder.Configuration);
+```
+
+Example configuration:
+
+```json
+{
+  "Logging": {
+    "NLog": {
+      "LogFilePath": "logs/exceptions.log"
+    }
+  }
+}
+```
+
+### Add Middleware
+
+Add the correlation ID middleware before the global exception middleware:
+
+```csharp
+using NetDevs.ExceptionProcessor.Middlewares;
+
+app.UseMiddleware<TraceIdMiddleware>();
+app.UseMiddleware<GlobalExceptionMiddleware>();
+```
+
+`TraceIdMiddleware` reads `X-Correlation-ID` from the incoming request when it exists. Otherwise it creates a new ID. The value is stored in `HttpContext.Items["CorrelationId"]` and returned in the `X-Correlation-ID` response header.
+
+### Throw Custom Exceptions
+
+Use the built-in exceptions for common API failures:
+
+```csharp
+using NetDevs.ExceptionProcessor.Exceptions.Custom;
+
+throw new ObjectNotFoundException("User", userId);
+```
+
+The global middleware returns a response similar to:
+
+```json
+{
+  "code": "ObjectNotFound",
+  "httpCode": 404,
+  "mainText": "Object not found",
+  "description": "The requested User with ID 123 was not found.",
+  "timestamp": "2026-07-06T12:30:00.0000000Z",
+  "traceId": "0HN1GH8P91FD0:00000001"
+}
+```
+
+### Create Application-Specific Exceptions
+
+Derive from `BaseException` when an application needs its own error code and HTTP status:
+
+```csharp
+using NetDevs.ExceptionProcessor.Exceptions.Base;
+
+public sealed class DuplicateEmailException : BaseException
+{
+    public DuplicateEmailException(string email)
+        : base(
+            "DuplicateEmail",
+            409,
+            "Duplicate email",
+            $"The email '{email}' is already in use.")
+    {
+    }
+}
+```
+
+### Notes
+
+- Exceptions derived from `BaseException` keep their configured code, HTTP status, main text and description.
+- Unknown exceptions are returned as `UnhandledException` with HTTP 500.
+- `ExceptionResponse.Timestamp` is set in UTC when the response is created.
+- `GlobalExceptionMiddleware` writes JSON with camel-case property names and includes the correlation ID in both the response body and header.
+
 ## Build
 
 ```bash
@@ -373,7 +496,10 @@ The test projects cover:
 - scoped handler registration,
 - validation for missing CQRS assembly configuration,
 - EF Core auditing service registration,
-- EF Core creation and update audit behavior.
+- EF Core creation and update audit behavior,
+- exception response mapping,
+- global exception middleware responses,
+- correlation ID middleware behavior.
 
 ## License
 
