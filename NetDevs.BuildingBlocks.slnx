@@ -1,11 +1,13 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="NetDevs.EntityFrameworkCore.Auditing/NetDevs.EntityFrameworkCore.Auditing.csproj" Id="3d8d7802-b4f5-4cc7-9c15-d68f03de6f05" />
     <Project Path="src/NetDevs.Cqrs.Abstractions/NetDevs.Cqrs.Abstractions.csproj" Id="67fe27aa-adbf-41ca-be8f-52fd559bbf2a" />
     <Project Path="src/NetDevs.Cqrs/NetDevs.Cqrs.csproj" Id="bb72b896-b0ce-4144-b237-76659755199c" />
     <Project Path="src/NetDevs.Domain.Abstractions/NetDevs.Domain.Abstractions.csproj" Id="90bd8846-6748-48c4-9cd8-6bc2bc1e4d2c" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/NetDevs.Cqrs.Tests/NetDevs.Cqrs.Tests.csproj" />
-	<Project Path="tests/NetDevs.Domain.Abstractions.Tests/NetDevs.Domain.Abstractions.Tests.csproj" />
+    <Project Path="tests/NetDevs.Domain.Abstractions.Tests/NetDevs.Domain.Abstractions.Tests.csproj" />
+	<Project Path="tests/NetDevs.EntityFrameworkCore.Auditing.Tests/NetDevs.EntityFrameworkCore.Auditing.Tests.csproj" />
   </Folder>
 </Solution>
