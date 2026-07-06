@@ -11,6 +11,7 @@ This repository contains small, focused packages that keep application and domai
 - [NetDevs.Domain.Abstractions](#netdevsdomainabstractions)
 - [NetDevs.Cqrs.Abstractions](#netdevscqrsabstractions)
 - [NetDevs.Cqrs](#netdevscqrs)
+- [NetDevs.EntityFrameworkCore.Auditing](#netdevsentityframeworkcoreauditing)
 - [Build](#build)
 - [Tests](#tests)
 - [License](#license)
@@ -22,6 +23,7 @@ This repository contains small, focused packages that keep application and domai
 | `NetDevs.Domain.Abstractions` | Base entity and auditing contracts for domain models. |
 | `NetDevs.Cqrs.Abstractions` | Dependency-free CQRS contracts for commands, queries and handlers. |
 | `NetDevs.Cqrs` | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
+| `NetDevs.EntityFrameworkCore.Auditing` | EF Core `SaveChangesInterceptor` for automatic audit metadata. |
 
 ## Repository Structure
 
@@ -30,9 +32,11 @@ src/
   NetDevs.Domain.Abstractions/
   NetDevs.Cqrs.Abstractions/
   NetDevs.Cqrs/
+  NetDevs.EntityFrameworkCore.Auditing/
 tests/
   NetDevs.Domain.Abstractions.Tests/
   NetDevs.Cqrs.Tests/
+  NetDevs.EntityFrameworkCore.Auditing.Tests/
 ```
 
 ## NetDevs.Domain.Abstractions
@@ -256,6 +260,99 @@ Handlers are registered:
 - Register handlers in the application composition root, usually where `IServiceCollection` is configured.
 - Keep command and query definitions in application modules, then register those modules explicitly.
 
+## NetDevs.EntityFrameworkCore.Auditing
+
+### Purpose
+
+`NetDevs.EntityFrameworkCore.Auditing` fills audit metadata for EF Core entities during `SaveChanges` and `SaveChangesAsync`. It is built around an EF Core `SaveChangesInterceptor` and the auditing contracts from `NetDevs.Domain.Abstractions`.
+
+### Installation
+
+```bash
+dotnet add package NetDevs.EntityFrameworkCore.Auditing
+```
+
+### Included Types
+
+- `AuditSaveChangesInterceptor`
+- `IDateTimeProvider`
+- `ICurrentUserProvider`
+- `SystemDateTimeProvider`
+- `AddEfCoreAuditing`
+
+### Provide Current User
+
+The package does not assume how your application identifies users. Provide an implementation of `ICurrentUserProvider` in your application layer or infrastructure layer:
+
+```csharp
+using NetDevs.EntityFrameworkCore.Auditing.Abstractions;
+
+public sealed class CurrentUserProvider : ICurrentUserProvider
+{
+    public string GetUserName()
+    {
+        return "system";
+    }
+}
+```
+
+### Register Auditing Services
+
+Register the current user provider and the auditing services in the composition root:
+
+```csharp
+using NetDevs.EntityFrameworkCore.Auditing.Abstractions;
+using NetDevs.EntityFrameworkCore.Auditing.Extensions;
+
+builder.Services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
+builder.Services.AddEfCoreAuditing();
+```
+
+### Attach the Interceptor to DbContext
+
+Resolve `AuditSaveChangesInterceptor` from DI and attach it to your EF Core context:
+
+```csharp
+using NetDevs.EntityFrameworkCore.Auditing.Interceptors;
+
+builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
+{
+    options
+        .UseSqlServer(connectionString)
+        .AddInterceptors(
+            serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
+});
+```
+
+### What Gets Updated
+
+For entities implementing `ICreatedEntity`:
+
+- `CreatedBy` and `CreatedAt` are set when the entity is added.
+- `CreatedBy` and `CreatedAt` are protected from modification when the entity is updated.
+
+For entities implementing `IUpdatedEntity`:
+
+- `UpdatedBy` and `UpdatedAt` stay empty when the entity is first added.
+- `UpdatedBy` and `UpdatedAt` are set when the entity is modified.
+
+### Example Entity
+
+```csharp
+using NetDevs.Domain.Abstractions.Auditing;
+
+public sealed class Customer : AuditableGuidEntity
+{
+    public string Email { get; set; } = string.Empty;
+}
+```
+
+### Notes
+
+- `SystemDateTimeProvider` uses `TimeProvider.System.GetUtcNow()`.
+- You can replace `IDateTimeProvider` in tests or applications that need deterministic time.
+- The interceptor only touches tracked entities in `Added` or `Modified` state.
+
 ## Build
 
 ```bash
@@ -274,7 +371,9 @@ The test projects cover:
 - auditing contracts,
 - CQRS handler scanning,
 - scoped handler registration,
-- validation for missing CQRS assembly configuration.
+- validation for missing CQRS assembly configuration,
+- EF Core auditing service registration,
+- EF Core creation and update audit behavior.
 
 ## License
 
