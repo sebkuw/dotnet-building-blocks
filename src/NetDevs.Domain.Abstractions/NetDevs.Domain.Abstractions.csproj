@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>NetDevs.Domain.Abstractions</AssemblyName>
+		<RootNamespace>NetDevs.Domain.Abstractions</RootNamespace>
+		<PackageId>NetDevs.Domain.Abstractions</PackageId>
+		<Version>1.0.0</Version>
+		<Authors>Sebastian Wnorowski</Authors>
+		<Description>Domain abstractions for entities and auditing contracts.</Description>
+		<PackageTags>domain;abstractions;entities;auditing;clean-architecture</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<DebugType>full</DebugType>
+		<DebugSymbols>true</DebugSymbols>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+</Project>
