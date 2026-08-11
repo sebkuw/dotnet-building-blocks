@@ -6,7 +6,7 @@
 		<AssemblyName>NetDevs.QueryableProcessor</AssemblyName>
 		<RootNamespace>NetDevs.QueryableProcessor</RootNamespace>
 		<PackageId>NetDevs.QueryableProcessor</PackageId>
-		<Version>1.0.0</Version>
+		<Version>1.0.1</Version>
 		<Authors>Sebastian Wnorowski</Authors>
 		<Description>A powerful library for dynamic filtering, sorting, and pagination of IQueryable collections.</Description>
 		<PackageTags>LINQ IQueryable Sorting Filtering Pagination Dynamic</PackageTags>
@@ -16,16 +16,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+		<None Update="README.md" Pack="true" PackagePath="\" />
+		<None Update="CHANGELOG.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
-
-	<PropertyGroup>
-		<DebugType>full</DebugType>
-		<DebugSymbols>true</DebugSymbols>
-	</PropertyGroup>
 
 </Project>
