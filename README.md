@@ -16,18 +16,20 @@ This repository contains small, focused packages that keep application and domai
 - [NetDevs.QueryableProcessor](#netdevsqueryableprocessor)
 - [Build](#build)
 - [Tests](#tests)
+- [Project Standards](#project-standards)
+- [Changelog](#changelog)
 - [License](#license)
 
 ## Packages
 
 | Package | Purpose |
 | --- | --- |
-| `NetDevs.Domain.Abstractions` | Base entity and auditing contracts for domain models. |
-| `NetDevs.Cqrs.Abstractions` | Dependency-free CQRS contracts for commands, queries and handlers. |
-| `NetDevs.Cqrs` | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
-| `NetDevs.EntityFrameworkCore.Auditing` | EF Core `SaveChangesInterceptor` for automatic audit metadata. |
-| `NetDevs.ExceptionProcessor` | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
-| `NetDevs.QueryableProcessor` | Dynamic `IQueryable` filtering, sorting, pagination and response metadata helpers. |
+| [`NetDevs.Domain.Abstractions`](src/NetDevs.Domain.Abstractions/README.md) | Base entity and auditing contracts for domain models. |
+| [`NetDevs.Cqrs.Abstractions`](src/NetDevs.Cqrs.Abstractions/README.md) | Dependency-free CQRS contracts for commands, queries and handlers. |
+| [`NetDevs.Cqrs`](src/NetDevs.Cqrs/README.md) | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
+| [`NetDevs.EntityFrameworkCore.Auditing`](src/NetDevs.EntityFrameworkCore.Auditing/README.md) | EF Core `SaveChangesInterceptor` for automatic audit metadata. |
+| [`NetDevs.ExceptionProcessor`](src/NetDevs.ExceptionProcessor/README.md) | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
+| [`NetDevs.QueryableProcessor`](src/NetDevs.QueryableProcessor/README.md) | Dynamic `IQueryable` filtering, sorting, pagination and Angular-compatible response metadata. |
 
 ## Repository Structure
 
@@ -40,6 +42,7 @@ src/
   NetDevs.ExceptionProcessor/
   NetDevs.QueryableProcessor/
 tests/
+  NetDevs.Cqrs.Abstractions.Tests/
   NetDevs.Domain.Abstractions.Tests/
   NetDevs.Cqrs.Tests/
   NetDevs.EntityFrameworkCore.Auditing.Tests/
@@ -514,7 +517,7 @@ using NetDevs.QueryableProcessor.Models;
 
 var request = new RequestDto
 {
-    SortParam = "desc_CreatedAt",
+    SortParam = "CreatedAt desc",
     Filters =
     [
         new FilterCondition
@@ -573,14 +576,14 @@ String operations work on string properties. `In` and `NotIn` expect a collectio
 
 ### Sorting
 
-Use `asc_` or `desc_` prefixes:
+Use the Angular-compatible suffix form:
 
 ```csharp
-query = query.SortBy("asc_Name");
-query = query.SortBy("desc_Category.Name");
+query = query.SortBy("Name asc");
+query = query.SortBy("Category.Name desc");
 ```
 
-Nested property paths are supported. If the sort parameter is empty or does not use a supported prefix, the original query is returned unchanged.
+The legacy `asc_Name` and `desc_Category.Name` forms remain supported. Nested paths and camelCase frontend property names are accepted. If the sort parameter is empty or invalid, the original query is returned unchanged.
 
 ### Notes
 
@@ -616,6 +619,20 @@ The test projects cover:
 - correlation ID middleware behavior,
 - dynamic query filtering, sorting and pagination,
 - full query request processing with EF Core InMemory.
+
+Coverage is collected with `coverlet.runsettings`. The repository quality gate requires at least 90% line coverage and 80% branch coverage for each production library.
+
+## Project Standards
+
+- [.NET agent instructions](AGENTS.md)
+- [Cross-cutting development skill](.agents/skills/develop-dotnet-building-blocks/SKILL.md)
+- [Angular shared-components contract](docs/angular-shared-components-contract.md)
+
+The repository targets .NET 10 and C# 14, centralizes package versions, uses locked restore, treats warnings as errors, and admits only approved free open-source licenses. Every behavior change requires proportionate tests, package documentation, and an `Unreleased` changelog entry.
+
+## Changelog
+
+See the [repository changelog](CHANGELOG.md) for cross-cutting changes and each package README for its package-specific history.
 
 ## License
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rozwijanie abstrakcji CQRS"
+  short_description: "Utrzymuj niezależne kontrakty CQRS"
+  default_prompt: "Użyj $develop-netdevs-cqrs-abstractions, aby zmienić i zweryfikować kontrakty CQRS."
