@@ -1,12 +1,23 @@
 using System.Text.Json;
+
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+
+using NetDevs.ExceptionProcessor.Exceptions.Base;
+
 using NetDevs.ExceptionProcessor.Exceptions.Custom;
 using NetDevs.ExceptionProcessor.Loggers;
 using NetDevs.ExceptionProcessor.Middlewares;
 using NetDevs.ExceptionProcessor.Models;
+
+using NLog;
+
 using Xunit;
+
+using ProcessorTimeoutException = NetDevs.ExceptionProcessor.Exceptions.Custom.TimeoutException;
+using ProcessorUnauthorizedAccessException = NetDevs.ExceptionProcessor.Exceptions.Custom.UnauthorizedAccessException;
 
 namespace NetDevs.ExceptionProcessor.Tests;
 
@@ -16,6 +27,12 @@ public sealed class ExceptionProcessorTests
     {
         PropertyNameCaseInsensitive = true
     };
+
+    [Fact]
+    public void ExceptionManager_rejects_missing_logger()
+    {
+        Assert.Throws<ArgumentNullException>(() => new ExceptionManager(null!));
+    }
 
     [Fact]
     public void ExceptionManager_maps_base_exception_to_configured_response()
@@ -49,6 +66,63 @@ public sealed class ExceptionProcessorTests
         Assert.Equal("An unexpected error occurred", response.MainText);
         Assert.Equal("Something broke", response.Description);
         Assert.Equal("trace-2", response.TraceId);
+    }
+
+    [Fact]
+    public void Built_in_exceptions_expose_stable_status_and_error_codes()
+    {
+        BaseException[] exceptions =
+        [
+            new DatabaseException("unavailable"),
+            new FileNotExistException("report.pdf"),
+            new ObjectNotFoundException("User", 123),
+            new OperationFailedException("conflict"),
+            new ProcessorTimeoutException(),
+            new ProcessorUnauthorizedAccessException(),
+            new ValidationException("Email is required")
+        ];
+
+        Assert.Collection(
+            exceptions,
+            exception => AssertContract(exception, "DatabaseError", 500),
+            exception => AssertContract(exception, "FileNotExist", 404),
+            exception => AssertContract(exception, "ObjectNotFound", 404),
+            exception => AssertContract(exception, "OperationFailed", 500),
+            exception => AssertContract(exception, "TimeoutError", 408),
+            exception => AssertContract(exception, "UnauthorizedAccess", 403),
+            exception => AssertContract(exception, "ValidationError", 400));
+    }
+
+    [Fact]
+    public void ExceptionLogger_initializes_and_logs_base_and_unhandled_exceptions()
+    {
+        string logPath = Path.Combine(Path.GetTempPath(), $"netdevs-exceptions-{Guid.NewGuid():N}.log");
+        try
+        {
+            IConfiguration configuration = new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["Logging:NLog:LogFilePath"] = logPath
+                })
+                .Build();
+            ExceptionLogger.Initialize(configuration);
+            var logger = new ExceptionLogger();
+
+            logger.LogException(new ValidationException("Invalid value"));
+            logger.LogException(new InvalidOperationException("Unexpected failure"));
+            LogManager.Flush();
+            LogManager.Shutdown();
+
+            string log = File.ReadAllText(logPath);
+            Assert.Contains("Base Exception", log, StringComparison.Ordinal);
+            Assert.Contains("Unhandled Exception", log, StringComparison.Ordinal);
+        }
+        finally
+        {
+            LogManager.Shutdown();
+            if (File.Exists(logPath))
+                File.Delete(logPath);
+        }
     }
 
     [Fact]
@@ -123,6 +197,39 @@ public sealed class ExceptionProcessorTests
         Assert.Equal(correlationId, context.Response.Headers["X-Correlation-ID"]);
     }
 
+    [Fact]
+    public async Task Middleware_pipeline_preserves_client_correlation_id_in_error_contract()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IExceptionLogger, TestExceptionLogger>();
+        services.AddSingleton<IExceptionManager, ExceptionManager>();
+
+        await using ServiceProvider provider = services.BuildServiceProvider(validateScopes: true);
+        var context = new DefaultHttpContext
+        {
+            RequestServices = provider,
+            TraceIdentifier = "server-trace"
+        };
+        context.Request.Headers["X-Correlation-ID"] = "angular-trace";
+
+        await using var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+
+        var exceptionMiddleware = new GlobalExceptionMiddleware(
+            _ => throw new ValidationException("Invalid filter"),
+            provider,
+            NullLogger<GlobalExceptionMiddleware>.Instance);
+        var traceMiddleware = new TraceIdMiddleware(exceptionMiddleware.InvokeAsync);
+
+        await traceMiddleware.InvokeAsync(context);
+
+        responseBody.Position = 0;
+        using JsonDocument document = await JsonDocument.ParseAsync(responseBody);
+
+        Assert.Equal("angular-trace", context.Response.Headers["X-Correlation-ID"]);
+        Assert.Equal("angular-trace", document.RootElement.GetProperty("traceId").GetString());
+    }
+
     private sealed class TestExceptionLogger : IExceptionLogger
     {
         public Exception? LoggedException { get; private set; }
@@ -131,5 +238,13 @@ public sealed class ExceptionProcessorTests
         {
             LoggedException = exception;
         }
+    }
+
+    private static void AssertContract(BaseException exception, string code, int httpCode)
+    {
+        Assert.Equal(code, exception.Code);
+        Assert.Equal(httpCode, exception.HttpCode);
+        Assert.False(string.IsNullOrWhiteSpace(exception.MainText));
+        Assert.False(string.IsNullOrWhiteSpace(exception.Description));
     }
 }

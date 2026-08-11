@@ -1,7 +1,6 @@
-﻿using NetDevs.ExceptionProcessor.Exceptions.Base;
+using NetDevs.ExceptionProcessor.Exceptions.Base;
 using NetDevs.ExceptionProcessor.Loggers;
 using NetDevs.ExceptionProcessor.Models;
-using System;
 
 namespace NetDevs.ExceptionProcessor;
 

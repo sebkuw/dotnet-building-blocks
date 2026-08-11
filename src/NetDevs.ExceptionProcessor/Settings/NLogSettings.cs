@@ -1,4 +1,4 @@
-﻿namespace NetDevs.ExceptionProcessor.Settings;
+namespace NetDevs.ExceptionProcessor.Settings;
 
 /// <summary>
 /// Represents NLog configuration settings loaded from appsettings.json.
