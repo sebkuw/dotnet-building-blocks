@@ -8,6 +8,7 @@
     <Project Path="src/NetDevs.QueryableProcessor/NetDevs.QueryableProcessor.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/NetDevs.Cqrs.Abstractions.Tests/NetDevs.Cqrs.Abstractions.Tests.csproj" />
     <Project Path="tests/NetDevs.Cqrs.Tests/NetDevs.Cqrs.Tests.csproj" />
     <Project Path="tests/NetDevs.Domain.Abstractions.Tests/NetDevs.Domain.Abstractions.Tests.csproj" />
     <Project Path="tests/NetDevs.EntityFrameworkCore.Auditing.Tests/NetDevs.EntityFrameworkCore.Auditing.Tests.csproj" />

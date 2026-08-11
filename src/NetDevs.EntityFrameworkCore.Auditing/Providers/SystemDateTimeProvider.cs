@@ -1,4 +1,4 @@
-﻿using NetDevs.EntityFrameworkCore.Auditing.Abstractions;
+using NetDevs.EntityFrameworkCore.Auditing.Abstractions;
 
 namespace NetDevs.EntityFrameworkCore.Auditing.Providers;
 

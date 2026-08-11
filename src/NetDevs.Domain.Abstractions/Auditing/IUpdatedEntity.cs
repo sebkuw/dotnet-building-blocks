@@ -1,4 +1,4 @@
-﻿namespace NetDevs.Domain.Abstractions.Auditing;
+namespace NetDevs.Domain.Abstractions.Auditing;
 
 /// <summary>
 /// Represents an entity that stores update audit information.

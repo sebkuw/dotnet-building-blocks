@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+
 using NetDevs.Domain.Abstractions.Auditing;
 using NetDevs.EntityFrameworkCore.Auditing.Abstractions;
 using NetDevs.EntityFrameworkCore.Auditing.Extensions;
 using NetDevs.EntityFrameworkCore.Auditing.Interceptors;
 using NetDevs.EntityFrameworkCore.Auditing.Providers;
+
 using Xunit;
 
 namespace NetDevs.EntityFrameworkCore.Auditing.Tests;
@@ -83,6 +85,34 @@ public sealed class AuditSaveChangesInterceptorTests
         Assert.Equal(updatedAt, entity.UpdatedAt);
     }
 
+    [Fact]
+    public void SaveChanges_ignores_entities_without_auditing_contracts()
+    {
+        using var scope = CreateScope("creator", FixedUtcNow);
+        var context = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        var entity = new PlainEntity { Name = "Plain entity" };
+
+        context.PlainEntities.Add(entity);
+        int changes = context.SaveChanges();
+
+        Assert.Equal(1, changes);
+        Assert.NotEqual(Guid.Empty, entity.Id);
+        Assert.Equal("Plain entity", entity.Name);
+    }
+
+    [Fact]
+    public void SystemDateTimeProvider_returns_current_utc_time()
+    {
+        var provider = new SystemDateTimeProvider();
+        DateTimeOffset before = DateTimeOffset.UtcNow;
+
+        DateTimeOffset result = provider.UtcNow();
+
+        DateTimeOffset after = DateTimeOffset.UtcNow;
+        Assert.InRange(result, before, after);
+        Assert.Equal(TimeSpan.Zero, result.Offset);
+    }
+
     private static AsyncServiceScope CreateScope(string userName, DateTimeOffset utcNow)
     {
         var services = new ServiceCollection();
@@ -111,10 +141,19 @@ public sealed class AuditSaveChangesInterceptorTests
         : DbContext(options)
     {
         public DbSet<TestEntity> Entities => Set<TestEntity>();
+
+        public DbSet<PlainEntity> PlainEntities => Set<PlainEntity>();
     }
 
     private sealed class TestEntity : AuditableGuidEntity
     {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class PlainEntity
+    {
+        public Guid Id { get; set; }
+
         public string Name { get; set; } = string.Empty;
     }
 

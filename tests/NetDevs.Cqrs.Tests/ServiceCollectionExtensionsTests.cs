@@ -1,5 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
+
 using NetDevs.Cqrs.Abstractions;
+
 using Xunit;
 
 namespace NetDevs.Cqrs.Tests;

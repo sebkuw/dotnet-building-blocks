@@ -1,4 +1,4 @@
-﻿namespace NetDevs.EntityFrameworkCore.Auditing.Abstractions;
+namespace NetDevs.EntityFrameworkCore.Auditing.Abstractions;
 
 /// <summary>
 /// Provides current UTC date and time.
