@@ -1,8 +1,7 @@
-﻿using NetDevs.QueryableProcessor.Constants;
-using System;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+
+using NetDevs.QueryableProcessor.Constants;
 
 namespace NetDevs.QueryableProcessor.Extensions;
 
@@ -19,10 +18,10 @@ public static class QueryableSort
     /// <param name="source">The IQueryable source to sort.</param>
     /// <param name="propertyPath">
     /// The property name or path to sort by.
-    /// Prefixes:
-    /// - "asc_" for ascending order.
-    /// - "desc_" for descending order.
-    /// Example: "desc_CreatedAt" sorts by `CreatedAt` in descending order.
+    /// Supported formats:
+    /// - "asc_Property" or "desc_Property".
+    /// - "Property asc" or "Property desc", as emitted by @netdevs/shared-ui-list.
+    /// Property lookup is case-insensitive and supports nested paths.
     /// If null or invalid return not changed source.
     /// </param>
     /// <returns>A sorted IQueryable collection.</returns>
@@ -33,19 +32,42 @@ public static class QueryableSort
         if (string.IsNullOrWhiteSpace(propertyPath))
             return source;
 
-        string method = SettingsConstants.OrderByMethod;
+        if (!TryParseSort(propertyPath, out string normalizedPath, out string method))
+            return source;
 
-        if (propertyPath.StartsWith(SettingsConstants.AscendingPrefix))
-            propertyPath = propertyPath[4..];
-        else if (propertyPath.StartsWith(SettingsConstants.DescendingPrefix))
+        return ApplySorting(source, normalizedPath, method);
+    }
+
+    private static bool TryParseSort(string sort, out string propertyPath, out string method)
+    {
+        string value = sort.Trim();
+        method = SettingsConstants.OrderByMethod;
+
+        if (value.StartsWith(SettingsConstants.AscendingPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            propertyPath = propertyPath[5..];
+            propertyPath = value[SettingsConstants.AscendingPrefix.Length..];
+        }
+        else if (value.StartsWith(SettingsConstants.DescendingPrefix, StringComparison.OrdinalIgnoreCase))
+        {
+            propertyPath = value[SettingsConstants.DescendingPrefix.Length..];
+            method = SettingsConstants.OrderByDescendingMethod;
+        }
+        else if (value.EndsWith(" asc", StringComparison.OrdinalIgnoreCase))
+        {
+            propertyPath = value[..^4].TrimEnd();
+        }
+        else if (value.EndsWith(" desc", StringComparison.OrdinalIgnoreCase))
+        {
+            propertyPath = value[..^5].TrimEnd();
             method = SettingsConstants.OrderByDescendingMethod;
         }
         else
-            return source;
+        {
+            propertyPath = string.Empty;
+            return false;
+        }
 
-        return ApplySorting(source, propertyPath, method);
+        return !string.IsNullOrWhiteSpace(propertyPath);
     }
 
     private static IQueryable<T> ApplySorting<T>(IQueryable<T> source, string propertyPath, string method)
@@ -56,7 +78,9 @@ public static class QueryableSort
         // Navigate through nested properties (e.g., "User.Name")
         foreach (string part in propertyPath.Split('.'))
         {
-            PropertyInfo? propertyInfo = property.Type.GetProperty(part);
+            PropertyInfo? propertyInfo = property.Type.GetProperty(
+                part,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
             if (propertyInfo is null)
                 return source; // Property doesn't exist, return unchanged
 

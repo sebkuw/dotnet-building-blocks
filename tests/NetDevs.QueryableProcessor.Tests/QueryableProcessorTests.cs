@@ -1,15 +1,25 @@
+using System.Text.Json;
+
 using Microsoft.EntityFrameworkCore;
+
 using NetDevs.QueryableProcessor.Enums;
 using NetDevs.QueryableProcessor.Extensions;
 using NetDevs.QueryableProcessor.Models;
 using NetDevs.QueryableProcessor.Solvers;
-using System.Text.Json;
+
 using Xunit;
 
 namespace NetDevs.QueryableProcessor.Tests;
 
 public sealed class QueryableProcessorTests
 {
+    private static readonly int[] IncludedProductIds = [1, 3, 4];
+
+    private static readonly JsonSerializerOptions CamelCaseJsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+    };
+
     [Fact]
     public void ApplyFilters_filters_by_string_operations()
     {
@@ -43,7 +53,7 @@ public sealed class QueryableProcessorTests
                 {
                     PropertyPath = nameof(TestProduct.Id),
                     Operation = FilterOperation.In,
-                    Value = new[] { 1, 3, 4 }
+                    Value = IncludedProductIds
                 },
                 new FilterCondition
                 {
@@ -102,6 +112,113 @@ public sealed class QueryableProcessorTests
     }
 
     [Fact]
+    public void ApplyFilters_supports_all_comparison_and_string_operations()
+    {
+        Assert.Equal([1, 2, 3], FilterIds(nameof(TestProduct.Status), FilterOperation.NotEqual, ProductStatus.Archived));
+        Assert.Equal([1, 3], FilterIds(nameof(TestProduct.Price), FilterOperation.GreaterThan, 100m));
+        Assert.Equal([2], FilterIds(nameof(TestProduct.Price), FilterOperation.LessThan, 100m));
+        Assert.Equal([1, 3, 4], FilterIds(nameof(TestProduct.Price), FilterOperation.GreaterThanOrEqual, 100m));
+        Assert.Equal([2, 4], FilterIds(nameof(TestProduct.Price), FilterOperation.LessThanOrEqual, 100m));
+        Assert.Equal([1], FilterIds(nameof(TestProduct.Name), FilterOperation.Contains, "top"));
+        Assert.Equal([2], FilterIds(nameof(TestProduct.Name), FilterOperation.StartsWith, "Note"));
+    }
+
+    [Fact]
+    public void ApplyFilters_converts_supported_json_scalar_values()
+    {
+        Guid key = Guid.NewGuid();
+        DateTime createdAt = new(2026, 8, 11, 12, 30, 0, DateTimeKind.Utc);
+        var record = new ConversionRecord
+        {
+            IntValue = 42,
+            LongValue = 9_007_199_254_740_991,
+            Text = "value",
+            Enabled = true,
+            Key = key,
+            CreatedAt = createdAt,
+            Status = ProductStatus.Published
+        };
+        IQueryable<ConversionRecord> records = new[] { record }.AsQueryable();
+
+        AssertJsonFilterMatch(records, nameof(ConversionRecord.IntValue), "42");
+        AssertJsonFilterMatch(records, nameof(ConversionRecord.LongValue), "9007199254740991");
+        AssertJsonFilterMatch(records, nameof(ConversionRecord.Text), "\"value\"");
+        AssertJsonFilterMatch(records, nameof(ConversionRecord.Enabled), "true");
+        AssertJsonFilterMatch(records, nameof(ConversionRecord.Key), $"\"{key}\"");
+        AssertJsonFilterMatch(records, nameof(ConversionRecord.CreatedAt), $"\"{createdAt:O}\"");
+        AssertJsonFilterMatch(records, nameof(ConversionRecord.Status), "\"Published\"");
+        AssertJsonFilterMatch(records, nameof(ConversionRecord.Status), "1");
+        AssertJsonFilterMatch(records, nameof(ConversionRecord.OptionalValue), "null");
+    }
+
+    [Fact]
+    public void ApplyFilters_handles_null_guid_and_invalid_inputs()
+    {
+        Guid key = Guid.NewGuid();
+        var products = new[]
+        {
+            new TestProduct { Id = 1, Name = "One", Key = key },
+            new TestProduct { Id = 2, Name = "Two", OptionalScore = 5 }
+        }.AsQueryable();
+
+        Assert.Single(products.ApplyFilters(
+        [
+            new FilterCondition
+            {
+                PropertyPath = "key",
+                Operation = FilterOperation.Equal,
+                Value = key.ToString()
+            }
+        ]));
+        Assert.Throws<FormatException>(() => products.ApplyFilters(
+        [
+            new FilterCondition
+            {
+                PropertyPath = nameof(TestProduct.Key),
+                Operation = FilterOperation.Equal,
+                Value = "not-a-guid"
+            }
+        ]));
+        Assert.Single(products.ApplyFilters(
+        [
+            new FilterCondition
+            {
+                PropertyPath = nameof(TestProduct.OptionalScore),
+                Operation = FilterOperation.Equal,
+                Value = null!
+            }
+        ]));
+        Assert.Empty(products.ApplyFilters(
+        [
+            new FilterCondition
+            {
+                PropertyPath = nameof(TestProduct.Id),
+                Operation = FilterOperation.Equal,
+                Value = null!
+            }
+        ]));
+
+        Assert.Throws<ArgumentException>(() => products.ApplyFilters(
+        [
+            new FilterCondition
+            {
+                PropertyPath = "missing",
+                Operation = FilterOperation.Equal,
+                Value = 1
+            }
+        ]));
+        Assert.Throws<ArgumentException>(() => products.ApplyFilters(
+        [
+            new FilterCondition
+            {
+                PropertyPath = nameof(TestProduct.Id),
+                Operation = FilterOperation.In,
+                Value = 1
+            }
+        ]));
+    }
+
+    [Fact]
     public void SortBy_sorts_by_nested_property()
     {
         IQueryable<TestProduct> products = CreateProducts().AsQueryable();
@@ -112,6 +229,73 @@ public sealed class QueryableProcessorTests
             .ToList();
 
         Assert.Equal(["Notebook", "Laptop Pro", "Desk", "Chair"], names);
+    }
+
+    [Fact]
+    public void SortBy_accepts_angular_sort_contract_and_camel_case_property()
+    {
+        List<int> ids = CreateProducts()
+            .AsQueryable()
+            .SortBy("price desc")
+            .Select(product => product.Id)
+            .ToList();
+
+        Assert.Equal([1, 3, 4, 2], ids);
+    }
+
+    [Fact]
+    public void SortBy_supports_ascending_suffix_and_returns_source_for_invalid_values()
+    {
+        IQueryable<TestProduct> products = CreateProducts().AsQueryable();
+
+        Assert.Equal([2, 4, 3, 1], products.SortBy("price asc").Select(product => product.Id));
+        Assert.Same(products, products.SortBy(string.Empty));
+        Assert.Same(products, products.SortBy("price"));
+        Assert.Same(products, products.SortBy("missing asc"));
+        Assert.Same(products, products.SortBy("asc_"));
+    }
+
+    [Fact]
+    public void Json_contract_matches_shared_ui_list_models()
+    {
+        const string json = """
+            {
+              "SortParam": "price desc",
+              "Filters": [
+                {
+                  "PropertyPath": "name",
+                  "Operation": 6,
+                  "Value": "pro"
+                }
+              ],
+              "PaginationOptions": {
+                "PageNumber": 1,
+                "PageSize": 25
+              }
+            }
+            """;
+
+        RequestDto request = JsonSerializer.Deserialize<RequestDto>(json)
+            ?? throw new InvalidOperationException("Angular request contract did not deserialize.");
+
+        Assert.Equal("price desc", request.SortParam);
+        FilterCondition filter = Assert.Single(request.Filters!);
+        Assert.Equal("name", filter.PropertyPath);
+        Assert.Equal(FilterOperation.Contains, filter.Operation);
+        Assert.Equal(1, request.PaginationOptions.PageNumber);
+        Assert.Equal(25, request.PaginationOptions.PageSize);
+
+        var response = new PaginationResponse<int>([1, 2], 3, 1, 2);
+        string responseJson = JsonSerializer.Serialize(response, CamelCaseJsonOptions);
+        using JsonDocument document = JsonDocument.Parse(responseJson);
+
+        Assert.True(document.RootElement.TryGetProperty("Data", out _));
+        Assert.True(document.RootElement.TryGetProperty("TotalItems", out _));
+        Assert.True(document.RootElement.TryGetProperty("TotalPages", out _));
+        Assert.True(document.RootElement.TryGetProperty("PageNumber", out _));
+        Assert.True(document.RootElement.TryGetProperty("PageSize", out _));
+        Assert.True(document.RootElement.TryGetProperty("HasNextPage", out _));
+        Assert.False(document.RootElement.TryGetProperty("data", out _));
     }
 
     [Fact]
@@ -136,6 +320,18 @@ public sealed class QueryableProcessorTests
             products.Paginate(options).ToList());
 
         Assert.Equal("pagination", exception.ParamName);
+    }
+
+    [Fact]
+    public void Pagination_validates_constructor_and_zero_page_size()
+    {
+        Assert.Throws<ArgumentException>(() => new PaginationOptions(0, 10));
+        Assert.Throws<ArgumentException>(() => new PaginationOptions(1, 0));
+
+        IQueryable<TestProduct> products = CreateProducts().AsQueryable();
+        var options = new PaginationOptions { PageNumber = 1, PageSize = 0 };
+
+        Assert.Throws<ArgumentException>(() => products.Paginate(options).ToList());
     }
 
     [Fact]
@@ -217,6 +413,43 @@ public sealed class QueryableProcessorTests
         ];
     }
 
+    private static List<int> FilterIds(string propertyPath, FilterOperation operation, object value)
+    {
+        return CreateProducts()
+            .AsQueryable()
+            .ApplyFilters(
+            [
+                new FilterCondition
+                {
+                    PropertyPath = propertyPath,
+                    Operation = operation,
+                    Value = value
+                }
+            ])
+            .Select(product => product.Id)
+            .ToList();
+    }
+
+    private static void AssertJsonFilterMatch(
+        IQueryable<ConversionRecord> records,
+        string propertyPath,
+        string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        JsonElement value = document.RootElement.Clone();
+        ConversionRecord match = Assert.Single(records.ApplyFilters(
+        [
+            new FilterCondition
+            {
+                PropertyPath = propertyPath,
+                Operation = FilterOperation.Equal,
+                Value = value
+            }
+        ]));
+
+        Assert.Same(records.Single(), match);
+    }
+
     private sealed class TestDbContext(DbContextOptions<TestDbContext> options)
         : DbContext(options)
     {
@@ -239,6 +472,29 @@ public sealed class QueryableProcessorTests
         public ProductStatus Status { get; set; }
 
         public TestCategory Category { get; set; } = new();
+
+        public Guid Key { get; set; }
+
+        public int? OptionalScore { get; set; }
+    }
+
+    private sealed class ConversionRecord
+    {
+        public int IntValue { get; init; }
+
+        public long LongValue { get; init; }
+
+        public string Text { get; init; } = string.Empty;
+
+        public bool Enabled { get; init; }
+
+        public Guid Key { get; init; }
+
+        public DateTime CreatedAt { get; init; }
+
+        public ProductStatus Status { get; init; }
+
+        public int? OptionalValue { get; init; }
     }
 
     private sealed class TestCategory

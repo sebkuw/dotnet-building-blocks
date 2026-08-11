@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace NetDevs.QueryableProcessor.Models;
 
@@ -12,36 +11,43 @@ public class PaginationResponse<T>
     /// <summary>
     /// The filtered data for the requested page.
     /// </summary>
+    [JsonPropertyName("Data")]
     public IEnumerable<T> Data { get; set; }
 
     /// <summary>
     /// The total number of items across all pages.
     /// </summary>
+    [JsonPropertyName("TotalItems")]
     public int TotalItems { get; set; }
 
     /// <summary>
     /// The total number of pages.
     /// </summary>
+    [JsonPropertyName("TotalPages")]
     public int TotalPages { get; set; }
 
     /// <summary>
     /// The requested page number.
     /// </summary>
+    [JsonPropertyName("PageNumber")]
     public int PageNumber { get; set; }
 
     /// <summary>
     /// The number of items per page.
     /// </summary>
+    [JsonPropertyName("PageSize")]
     public int PageSize { get; set; }
 
     /// <summary>
     /// Indicates whether there is a next page available.
     /// </summary>
+    [JsonPropertyName("HasNextPage")]
     public bool HasNextPage => PageNumber * PageSize < TotalItems;
 
     /// <summary>
     /// Indicates whether there is a previous page available.
     /// </summary>
+    [JsonPropertyName("HasPreviousPage")]
     public bool HasPreviousPage => PageNumber > 1;
 
     /// <summary>

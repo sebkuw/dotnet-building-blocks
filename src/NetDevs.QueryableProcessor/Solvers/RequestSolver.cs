@@ -1,15 +1,15 @@
-﻿using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
+
+using Microsoft.EntityFrameworkCore;
+
 using NetDevs.QueryableProcessor.Extensions;
 using NetDevs.QueryableProcessor.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace NetDevs.QueryableProcessor.Solvers;
 
+/// <summary>
+/// Applies a complete query request and projects a paginated response.
+/// </summary>
 public static class RequestSolver
 {
     /// <summary>
