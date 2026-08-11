@@ -1,4 +1,4 @@
-﻿using NetDevs.ExceptionProcessor.Exceptions.Base;
+using NetDevs.ExceptionProcessor.Exceptions.Base;
 
 namespace NetDevs.ExceptionProcessor.Exceptions.Custom;
 
@@ -7,6 +7,8 @@ namespace NetDevs.ExceptionProcessor.Exceptions.Custom;
 /// </summary>
 public class ValidationException : BaseException
 {
+    /// <summary>Initializes a validation error.</summary>
+    /// <param name="details">Safe client-facing validation details.</param>
     public ValidationException(string details)
         : base("ValidationError", 400, "Invalid input", $"Validation failed: {details}")
     {

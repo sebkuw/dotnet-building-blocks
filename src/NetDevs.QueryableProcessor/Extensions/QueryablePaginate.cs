@@ -1,10 +1,11 @@
-﻿using NetDevs.QueryableProcessor.Constants;
+using NetDevs.QueryableProcessor.Constants;
 using NetDevs.QueryableProcessor.Models;
-using System;
-using System.Linq;
 
 namespace NetDevs.QueryableProcessor.Extensions;
 
+/// <summary>
+/// Provides pagination operations for queryable sources.
+/// </summary>
 public static class QueryablePaginate
 {
     /// <summary>

@@ -1,6 +1,7 @@
-﻿using NetDevs.QueryableProcessor.Constants;
-using System;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
+
+using NetDevs.QueryableProcessor.Constants;
 
 namespace NetDevs.QueryableProcessor.Models;
 
@@ -13,6 +14,7 @@ public class PaginationOptions
     /// The page number (1-based index).
     /// </summary>
     [Range(1, int.MaxValue, ErrorMessage = "Page number must be at least 1.")]
+    [JsonPropertyName("PageNumber")]
     public int PageNumber { get; init; }
 
 
@@ -20,6 +22,7 @@ public class PaginationOptions
     /// The number of items per page.
     /// </summary>
     [Range(1, SettingsConstants.MaxPageSize, ErrorMessage = "Page size must be between 1 and 100.")]
+    [JsonPropertyName("PageSize")]
     public int PageSize { get; init; }
 
     /// <summary>

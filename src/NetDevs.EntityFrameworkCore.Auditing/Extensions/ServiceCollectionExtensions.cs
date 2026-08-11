@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
+
 using NetDevs.EntityFrameworkCore.Auditing.Abstractions;
 using NetDevs.EntityFrameworkCore.Auditing.Interceptors;
 using NetDevs.EntityFrameworkCore.Auditing.Providers;

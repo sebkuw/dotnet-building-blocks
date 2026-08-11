@@ -1,8 +1,12 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
+
 using NetDevs.Cqrs.Abstractions;
 
 namespace NetDevs.Cqrs;
 
+/// <summary>
+/// Adds NetDevs CQRS handlers to a dependency injection container.
+/// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>

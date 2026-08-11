@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rozwijanie bibliotek .NET"
+  short_description: "Utrzymuj cały zestaw bibliotek .NET 10"
+  default_prompt: "Użyj $develop-dotnet-building-blocks, aby wprowadzić i zweryfikować przekrojową zmianę w repozytorium."

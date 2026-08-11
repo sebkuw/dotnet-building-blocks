@@ -1,5 +1,3 @@
-﻿using System;
-
 namespace NetDevs.ExceptionProcessor.Exceptions.Base;
 
 /// <summary>

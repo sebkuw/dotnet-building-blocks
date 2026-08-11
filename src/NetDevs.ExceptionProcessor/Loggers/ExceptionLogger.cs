@@ -1,10 +1,11 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
+
 using NetDevs.ExceptionProcessor.Exceptions.Base;
 using NetDevs.ExceptionProcessor.Settings;
+
 using NLog;
 using NLog.Config;
 using NLog.Targets;
-using System;
 
 namespace NetDevs.ExceptionProcessor.Loggers;
 
@@ -24,8 +25,7 @@ namespace NetDevs.ExceptionProcessor.Loggers;
 /// </summary>
 public class ExceptionLogger : IExceptionLogger
 {
-    private static Logger Logger;
-    private static NLogSettings _settings;
+    private static Logger? _logger;
 
     /// <summary>
     /// Initializes the NLogExceptionLogger and loads settings from configuration.
@@ -33,19 +33,19 @@ public class ExceptionLogger : IExceptionLogger
     /// <param name="configuration">The application configuration.</param>
     public static void Initialize(IConfiguration configuration)
     {
-        _settings = configuration.GetSection("Logging:NLog").Get<NLogSettings>()
+        NLogSettings settings = configuration.GetSection("Logging:NLog").Get<NLogSettings>()
             ?? new NLogSettings();
 
         LoggingConfiguration config = new();
         FileTarget logfile = new("file")
         {
-            FileName = _settings.LogFilePath,
+            FileName = settings.LogFilePath,
             Layout = "${longdate} | ${level} | ${message}"
         };
 
         config.AddRule(LogLevel.Error, LogLevel.Fatal, logfile);
         LogManager.Configuration = config;
-        Logger = LogManager.GetCurrentClassLogger();
+        _logger = LogManager.GetCurrentClassLogger();
     }
 
     /// <summary>
@@ -54,12 +54,12 @@ public class ExceptionLogger : IExceptionLogger
     /// <param name="exception">The exception to log.</param>
     public void LogException(Exception exception)
     {
-        if (Logger == null)
+        if (_logger is null)
             throw new InvalidOperationException("NLogExceptionLogger must be initialized first");
 
         if (exception is BaseException baseEx)
-            Logger.Error(baseEx, $"Base Exception - Code: {baseEx.Code}, HttpCode: {baseEx.HttpCode}");
+            _logger.Error(baseEx, "Base Exception - Code: {Code}, HttpCode: {HttpCode}", baseEx.Code, baseEx.HttpCode);
         else
-            Logger.Error(exception, "Unhandled Exception occurred");
+            _logger.Error(exception, "Unhandled Exception occurred");
     }
 }

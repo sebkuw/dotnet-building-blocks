@@ -1,4 +1,4 @@
-﻿namespace NetDevs.Domain.Abstractions.Entities;
+namespace NetDevs.Domain.Abstractions.Entities;
 
 /// <summary>
 /// Represents a base entity with <see cref="Guid"/> identifier.

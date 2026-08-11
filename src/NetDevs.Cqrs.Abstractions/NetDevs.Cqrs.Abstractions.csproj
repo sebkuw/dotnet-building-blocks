@@ -6,7 +6,7 @@
 		<AssemblyName>NetDevs.Cqrs.Abstractions</AssemblyName>
 		<RootNamespace>NetDevs.Cqrs.Abstractions</RootNamespace>
 		<PackageId>NetDevs.Cqrs.Abstractions</PackageId>
-		<Version>1.0.0</Version>
+		<Version>1.0.1</Version>
 		<Authors>Sebastian Wnorowski</Authors>
 		<Description>
 			CQRS pattern marker interfaces for .NET.
@@ -26,13 +26,9 @@
 		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
-	<PropertyGroup>
-		<DebugType>full</DebugType>
-		<DebugSymbols>true</DebugSymbols>
-	</PropertyGroup>
-
 	<ItemGroup>
-		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+		<None Update="README.md" Pack="true" PackagePath="\" />
+		<None Update="CHANGELOG.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 </Project>

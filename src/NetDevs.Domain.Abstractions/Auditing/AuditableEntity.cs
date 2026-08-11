@@ -1,4 +1,4 @@
-﻿using NetDevs.Domain.Abstractions.Entities;
+using NetDevs.Domain.Abstractions.Entities;
 
 namespace NetDevs.Domain.Abstractions.Auditing;
 

@@ -1,4 +1,4 @@
-﻿using NetDevs.ExceptionProcessor.Exceptions.Base;
+using NetDevs.ExceptionProcessor.Exceptions.Base;
 
 namespace NetDevs.ExceptionProcessor.Exceptions.Custom;
 
@@ -7,6 +7,7 @@ namespace NetDevs.ExceptionProcessor.Exceptions.Custom;
 /// </summary>
 public class TimeoutException : BaseException
 {
+    /// <summary>Initializes an operation-timeout error.</summary>
     public TimeoutException()
         : base("TimeoutError", 408, "Operation timed out", "The operation exceeded the allowed execution time.")
     {

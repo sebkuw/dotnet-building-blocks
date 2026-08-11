@@ -1,4 +1,4 @@
-﻿using NetDevs.ExceptionProcessor.Exceptions.Base;
+using NetDevs.ExceptionProcessor.Exceptions.Base;
 
 namespace NetDevs.ExceptionProcessor.Exceptions.Custom;
 
@@ -7,6 +7,7 @@ namespace NetDevs.ExceptionProcessor.Exceptions.Custom;
 /// </summary>
 public class UnauthorizedAccessException : BaseException
 {
+    /// <summary>Initializes an access-denied error.</summary>
     public UnauthorizedAccessException()
         : base("UnauthorizedAccess", 403, "Access denied", "You do not have permission to perform this operation.")
     {

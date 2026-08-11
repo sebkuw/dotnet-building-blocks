@@ -1,5 +1,4 @@
-﻿using NetDevs.ExceptionProcessor.Models;
-using System;
+using NetDevs.ExceptionProcessor.Models;
 
 namespace NetDevs.ExceptionProcessor;
 

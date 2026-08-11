@@ -1,4 +1,4 @@
-﻿namespace NetDevs.QueryableProcessor.Enums;
+namespace NetDevs.QueryableProcessor.Enums;
 
 /// <summary>
 /// Defines supported filter operations.

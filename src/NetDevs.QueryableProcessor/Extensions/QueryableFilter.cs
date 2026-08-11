@@ -1,14 +1,16 @@
-﻿using NetDevs.QueryableProcessor.Enums;
-using NetDevs.QueryableProcessor.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json;
 
+using NetDevs.QueryableProcessor.Enums;
+using NetDevs.QueryableProcessor.Models;
+
 namespace NetDevs.QueryableProcessor.Extensions;
 
+/// <summary>
+/// Provides dynamic filtering operations for queryable sources.
+/// </summary>
 public static class QueryableFilter
 {
     /// <summary>
@@ -45,7 +47,7 @@ public static class QueryableFilter
     /// <typeparam name="T">The type of elements in the IQueryable collection.</typeparam>
     /// <param name="source">The IQueryable source to filter.</param>
     /// <param name="propertyPath">The property name or path (e.g., "User.Address.City").</param>
-    /// <param name="operation">The filter operation: "==", "!=", ">", "<", ">=", "<=", "in", "notIn", "contains", "startsWith".</param>
+    /// <param name="operation">The filter operation, such as equality, comparison, collection, or string matching.</param>
     /// <param name="value">The value to filter by. For "in" and "notIn", provide a list.</param>
     /// <returns>A filtered IQueryable collection.</returns>
     /// <exception cref="ArgumentException">Thrown when an invalid operation is provided.</exception>
@@ -57,9 +59,17 @@ public static class QueryableFilter
         ParameterExpression param = Expression.Parameter(typeof(T), "x");
         Expression property = param;
 
-        // Nawigujemy przez podwójne właściwości (np. "User.Name")
+        // Navigate through nested properties (for example, "User.Name").
         foreach (string part in propertyPath.Split('.'))
-            property = Expression.Property(property, part);
+        {
+            PropertyInfo? propertyInfo = property.Type.GetProperty(
+                part,
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.IgnoreCase);
+            if (propertyInfo is null)
+                throw new ArgumentException($"Property path '{propertyPath}' does not exist.", nameof(propertyPath));
+
+            property = Expression.Property(property, propertyInfo);
+        }
 
         Expression comparison;
 
@@ -122,12 +132,11 @@ public static class QueryableFilter
     }
 
     /// <summary>
-    /// Converts the given value to the specified target type,
-    /// with special handling for enums, strings and JsonElement.
+    /// Builds a strongly typed collection membership expression.
     /// </summary>
-    /// <param name="value">The value to convert</param>
-    /// <param name="targetType">The target type to convert to</param>
-    /// <returns>Converted object of the target type</returns>
+    /// <param name="value">The collection supplied by the filter.</param>
+    /// <param name="property">The property checked for membership.</param>
+    /// <returns>A call to the typed collection's Contains method.</returns>
     private static MethodCallExpression BuildContainsExpression(object value, Expression property)
     {
         IEnumerable<object?> rawValues = value switch
@@ -193,9 +202,9 @@ public static class QueryableFilter
         {
             if (Guid.TryParse(stringValue, out Guid guid))
                 return guid;
-            return Guid.Empty;
+            throw new FormatException($"'{stringValue}' is not a valid GUID value.");
         }
         else
-            return Convert.ChangeType(value, effectiveTargetType);
+            return Convert.ChangeType(value, effectiveTargetType, CultureInfo.InvariantCulture);
     }
 }

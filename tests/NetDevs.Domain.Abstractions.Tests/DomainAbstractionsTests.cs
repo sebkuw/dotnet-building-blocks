@@ -1,5 +1,6 @@
 using NetDevs.Domain.Abstractions.Auditing;
 using NetDevs.Domain.Abstractions.Entities;
+
 using Xunit;
 
 namespace NetDevs.Domain.Abstractions.Tests;
