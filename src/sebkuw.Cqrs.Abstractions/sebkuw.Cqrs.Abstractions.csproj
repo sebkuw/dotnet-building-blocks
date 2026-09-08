@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AssemblyName>sebkuw.Cqrs.Abstractions</AssemblyName>
+		<RootNamespace>sebkuw.Cqrs.Abstractions</RootNamespace>
+		<PackageId>sebkuw.Cqrs.Abstractions</PackageId>
+		<Version>2.0.0</Version>
+		<Authors>Sebastian Wnorowski</Authors>
+		<Description>
+			CQRS pattern marker interfaces for .NET.
+
+			Contains:
+			• ICommand, ICommand&lt;TResult&gt;
+			• IQuery&lt;TResult&gt;
+			• ICommandHandler&lt;TCommand&gt;, ICommandHandler&lt;TCommand, TResult&gt;
+			• IQueryHandler&lt;TQuery, TResult&gt;
+
+			Lightweight, dependency-free abstractions for Clean Architecture CQRS implementations.
+		</Description>
+		<PackageTags>cqrs;mediatr;command;query;handler;clean-architecture;ddd;abstractions;contracts</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Update="README.md" Pack="true" PackagePath="\" />
+		<None Update="CHANGELOG.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+</Project>

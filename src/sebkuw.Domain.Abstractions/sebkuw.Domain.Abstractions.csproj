@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>sebkuw.Domain.Abstractions</AssemblyName>
+		<RootNamespace>sebkuw.Domain.Abstractions</RootNamespace>
+		<PackageId>sebkuw.Domain.Abstractions</PackageId>
+		<Version>2.0.0</Version>
+		<Authors>Sebastian Wnorowski</Authors>
+		<Description>Domain abstractions for entities, auditing, deactivation, and persistence lifecycle contracts.</Description>
+		<PackageTags>domain;abstractions;entities;auditing;lifecycle;append-only;clean-architecture</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Update="README.md" Pack="true" PackagePath="\" />
+		<None Update="CHANGELOG.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+</Project>

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Rozwijanie NetDevs CQRS"
-  short_description: "Utrzymuj rejestrację procedur obsługi CQRS"
-  default_prompt: "Użyj $develop-netdevs-cqrs, aby zmienić i zweryfikować rejestrację procedur obsługi CQRS."

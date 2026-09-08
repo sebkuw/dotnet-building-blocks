@@ -7,7 +7,7 @@ This document defines the HTTP-facing compatibility boundary between this reposi
 - reference version: `0.0.1`
 - reference models: `projects/shared-ui-list/src/lib/components/dynamic-table/models`
 
-The contract is protected by tests in `NetDevs.QueryableProcessor.Tests` and `NetDevs.ExceptionProcessor.Tests`. Changes to either side require synchronized contract tests, documentation, changelogs, and SemVer analysis.
+The contract is protected by tests in `sebkuw.QueryableProcessor.Tests` and `sebkuw.ExceptionProcessor.Tests`. Changes to either side require synchronized contract tests, documentation, changelogs, and SemVer analysis.
 
 ## Query request
 
@@ -92,7 +92,7 @@ The .NET response uses explicit PascalCase JSON names, even when the application
 
 ## Error response and correlation
 
-`NetDevs.ExceptionProcessor` returns camelCase error JSON:
+`sebkuw.ExceptionProcessor` returns camelCase error JSON:
 
 ```json
 {
@@ -116,7 +116,7 @@ Rules:
 ## Verification checklist
 
 - Compare the current Angular interfaces and enum values with this document.
-- Run `NetDevs.QueryableProcessor.Tests` for request, response, filtering, sorting, and pagination changes.
-- Run `NetDevs.ExceptionProcessor.Tests` for error and correlation changes.
+- Run `sebkuw.QueryableProcessor.Tests` for request, response, filtering, sorting, and pagination changes.
+- Run `sebkuw.ExceptionProcessor.Tests` for error and correlation changes.
 - Update both repositories when a shared contract changes.
 - Record the change and migration impact in the affected package changelogs.

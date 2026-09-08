@@ -25,27 +25,27 @@ jobs:
           dotnet-version: 10.0.x
 
       - name: Restore locked dependencies
-        run: dotnet restore NetDevs.BuildingBlocks.slnx --locked-mode
+        run: dotnet restore sebkuw.BuildingBlocks.slnx --locked-mode
 
       - name: Verify dependency licenses
         shell: pwsh
         run: ./eng/verify-package-licenses.ps1
 
       - name: Verify formatting
-        run: dotnet format NetDevs.BuildingBlocks.slnx --verify-no-changes --no-restore
+        run: dotnet format sebkuw.BuildingBlocks.slnx --verify-no-changes --no-restore
 
       - name: Build
-        run: dotnet build NetDevs.BuildingBlocks.slnx --configuration Release --no-restore
+        run: dotnet build sebkuw.BuildingBlocks.slnx --configuration Release --no-restore
 
       - name: Test with coverage
-        run: dotnet test NetDevs.BuildingBlocks.slnx --configuration Release --no-build --settings coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory artifacts/TestResults
+        run: dotnet test sebkuw.BuildingBlocks.slnx --configuration Release --no-build --settings coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory artifacts/TestResults
 
       - name: Verify coverage thresholds
         shell: pwsh
         run: ./eng/verify-coverage.ps1
 
       - name: Pack
-        run: dotnet pack NetDevs.BuildingBlocks.slnx --configuration Release --no-build --output artifacts/packages
+        run: dotnet pack sebkuw.BuildingBlocks.slnx --configuration Release --no-build --output artifacts/packages
 
       - name: Verify package contents
         shell: pwsh

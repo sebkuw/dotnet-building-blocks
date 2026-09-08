@@ -1,6 +1,6 @@
 ---
 name: develop-dotnet-building-blocks
-description: Utrzymuj kompletne repozytorium bibliotek NetDevs dla .NET 10 obejmujące wiele paczek. Używaj przy przekrojowych zmianach architektury, zależności, kompilacji, CI, wydań, dokumentacji, dzienników zmian, zasad testowania lub kontraktu z Angular, które dotyczą więcej niż jednej biblioteki NetDevs.
+description: Utrzymuj kompletne repozytorium bibliotek sebkuw dla .NET 10 obejmujące wiele paczek. Używaj przy przekrojowych zmianach architektury, zależności, kompilacji, CI, wydań, dokumentacji, dzienników zmian, zasad testowania lub kontraktu z Angular, które dotyczą więcej niż jednej biblioteki sebkuw.
 ---
 
 # Rozwijanie bibliotek .NET Building Blocks

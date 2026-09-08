@@ -1,7 +1,7 @@
 # Instrukcje dla testów
 
 - Stosuj zasady testowania i jakości z głównego `AGENTS.md`.
-- Odwzorowuj bibliotekę `src/NetDevs.X` w projekcie `tests/NetDevs.X.Tests`.
+- Odwzorowuj bibliotekę `src/sebkuw.X` w projekcie `tests/sebkuw.X.Tests`.
 - Nazywaj testy według obserwowalnego zachowania. Stosuj układ arrange-act-assert bez komentarzy zastępujących czytelny kod.
 - Testuj przez publiczne API. Mechanizmu refleksji używaj tylko do jawnych testów kontraktu lub architektury.
 - Nie współdziel mutowalnego stanu między testami i nie polegaj na kolejności wykonania.
