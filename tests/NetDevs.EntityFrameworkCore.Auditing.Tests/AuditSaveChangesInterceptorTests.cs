@@ -33,6 +33,8 @@ public sealed class AuditSaveChangesInterceptorTests
 
         Assert.IsType<AuditSaveChangesInterceptor>(
             scope.ServiceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
+        Assert.IsType<EntityLifecycleInterceptor>(
+            scope.ServiceProvider.GetRequiredService<EntityLifecycleInterceptor>());
     }
 
     [Fact]
@@ -53,6 +55,20 @@ public sealed class AuditSaveChangesInterceptorTests
         Assert.Equal(FixedUtcNow, entity.CreatedAt);
         Assert.Null(entity.UpdatedBy);
         Assert.Null(entity.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task SaveChangesAsync_sets_creation_audit_values_for_created_auditable_entities()
+    {
+        await using var scope = CreateScope("creator", FixedUtcNow);
+        var context = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+        var entity = new TestCreatedEntity { Name = "Immutable history" };
+
+        context.CreatedEntities.Add(entity);
+        await context.SaveChangesAsync();
+
+        Assert.Equal("creator", entity.CreatedBy);
+        Assert.Equal(FixedUtcNow, entity.CreatedAt);
     }
 
     [Fact]
@@ -123,13 +139,15 @@ public sealed class AuditSaveChangesInterceptorTests
         services.AddSingleton(new TestDateTimeProvider(utcNow));
         services.AddSingleton<IDateTimeProvider>(serviceProvider =>
             serviceProvider.GetRequiredService<TestDateTimeProvider>());
-        services.AddScoped<AuditSaveChangesInterceptor>();
+        services.AddEfCoreAuditing();
+        services.AddSingleton<IDateTimeProvider>(serviceProvider =>
+            serviceProvider.GetRequiredService<TestDateTimeProvider>());
 
         services.AddDbContext<TestDbContext>((serviceProvider, options) =>
         {
             options
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
-                .AddInterceptors(serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
+                .AddNetDevsAuditingInterceptors(serviceProvider);
         });
 
         return services
@@ -143,9 +161,16 @@ public sealed class AuditSaveChangesInterceptorTests
         public DbSet<TestEntity> Entities => Set<TestEntity>();
 
         public DbSet<PlainEntity> PlainEntities => Set<PlainEntity>();
+
+        public DbSet<TestCreatedEntity> CreatedEntities => Set<TestCreatedEntity>();
     }
 
     private sealed class TestEntity : AuditableGuidEntity
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private sealed class TestCreatedEntity : CreatedAuditableEntity<Guid>
     {
         public string Name { get; set; } = string.Empty;
     }

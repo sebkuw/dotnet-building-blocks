@@ -7,10 +7,15 @@ All notable changes to `NetDevs.Domain.Abstractions` are documented here. The fo
 ### Added
 
 - Package-specific documentation, development instructions, changelog, and quality workflow.
+- `IHardDeleteProtected`, `IDeactivatable`, and `IAppendOnlyEntity` lifecycle contracts.
+- `CreatedAuditableEntity<TId>` for creation-only audit metadata.
+- `DeactivatableAuditableEntity<TId>` with explicit, idempotent deactivation and reactivation operations.
 
 ### Changed
 
 - Declared the package's MIT license in NuGet metadata.
+- `AuditableEntity<TId>` now inherits creation metadata from `CreatedAuditableEntity<TId>` without changing its existing public properties.
+- Advanced the package version to `1.1.0` for the additive public API.
 
 ## [1.0.0] - 2026-08-11
 

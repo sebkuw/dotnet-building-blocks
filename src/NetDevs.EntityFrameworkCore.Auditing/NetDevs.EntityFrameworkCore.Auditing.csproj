@@ -7,10 +7,10 @@
 		<AssemblyName>NetDevs.EntityFrameworkCore.Auditing</AssemblyName>
 		<RootNamespace>NetDevs.EntityFrameworkCore.Auditing</RootNamespace>
 		<PackageId>NetDevs.EntityFrameworkCore.Auditing</PackageId>
-		<Version>1.0.1</Version>
+		<Version>1.1.0</Version>
 		<Authors>Sebastian Wnorowski</Authors>
-		<Description>EF Core auditing based on SaveChangesInterceptor.</Description>
-		<PackageTags>efcore;auditing;interceptor;savechanges;clean-architecture</PackageTags>
+		<Description>EF Core auditing and entity lifecycle enforcement based on SaveChangesInterceptor.</Description>
+		<PackageTags>efcore;auditing;lifecycle;append-only;interceptor;savechanges;clean-architecture</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>

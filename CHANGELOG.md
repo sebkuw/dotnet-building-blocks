@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Reusable entity lifecycle contracts for hard-delete protection, deactivation, and append-only records.
+- EF Core lifecycle enforcement integrated with the existing auditing registration pipeline.
 - Hierarchical `AGENTS.md` guidance for the repository, tests, and every production library.
 - Repository-local development skills for cross-cutting work and all six NuGet packages.
 - Per-package README and changelog files included in NuGet packages.
@@ -17,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Split creation-only audit metadata into `CreatedAuditableEntity<TId>` while preserving the public `AuditableEntity<TId>` contract.
 - Standardized the repository on the .NET 10 SDK feature band and C# 14.
 - Centralized NuGet package versions and enabled deterministic locked restore.
 - Scoped dependency restore to the public `nuget.org` source with explicit source mapping.
