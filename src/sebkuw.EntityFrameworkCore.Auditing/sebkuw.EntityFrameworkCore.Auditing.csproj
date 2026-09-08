@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AssemblyName>sebkuw.EntityFrameworkCore.Auditing</AssemblyName>
+		<RootNamespace>sebkuw.EntityFrameworkCore.Auditing</RootNamespace>
+		<PackageId>sebkuw.EntityFrameworkCore.Auditing</PackageId>
+		<Version>2.0.0</Version>
+		<Authors>Sebastian Wnorowski</Authors>
+		<Description>EF Core auditing and entity lifecycle enforcement based on SaveChangesInterceptor.</Description>
+		<PackageTags>efcore;auditing;lifecycle;append-only;interceptor;savechanges;clean-architecture</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="README.md" Pack="true" PackagePath="\" />
+		<None Update="CHANGELOG.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\sebkuw.Domain.Abstractions\sebkuw.Domain.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

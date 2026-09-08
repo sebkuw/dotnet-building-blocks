@@ -1,4 +1,0 @@
-interface:
-  display_name: "Rozwijanie abstrakcji domenowych"
-  short_description: "Utrzymuj reużywalne kontrakty domenowe"
-  default_prompt: "Użyj $develop-netdevs-domain-abstractions, aby zmienić i zweryfikować abstrakcje domenowe."

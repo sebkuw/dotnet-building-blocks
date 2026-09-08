@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<AssemblyName>sebkuw.ExceptionProcessor</AssemblyName>
+		<RootNamespace>sebkuw.ExceptionProcessor</RootNamespace>
+		<PackageId>sebkuw.ExceptionProcessor</PackageId>
+		<Version>2.0.0</Version>
+		<Authors>Sebastian Wnorowski</Authors>
+		<Description>A flexible library for handling exceptions, logging errors with NLog, and returning structured exception responses.</Description>
+		<PackageTags>Exception Handling Logging NLog ErrorManagement Middleware</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="NLog" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="README.md" Pack="true" PackagePath="\" />
+		<None Update="CHANGELOG.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
+</Project>

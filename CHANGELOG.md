@@ -15,10 +15,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Per-package README and changelog files included in NuGet packages.
 - A documented compatibility contract with `angular-shared-components`.
 - CI quality gates for formatting, Release build, tests, coverage, licenses, vulnerabilities, packing, and package contents.
-- The missing `NetDevs.Cqrs.Abstractions.Tests` project.
+- The missing `sebkuw.Cqrs.Abstractions.Tests` project.
 
 ### Changed
 
+- Renamed every library, NuGet package, assembly, namespace, project, test project, solution reference, and repository development skill from the previous package prefix to `sebkuw`.
+- Advanced all packages to version 2.0.0 because consumers must replace their package references and namespace imports with the corresponding `sebkuw.*` names.
 - Split creation-only audit metadata into `CreatedAuditableEntity<TId>` while preserving the public `AuditableEntity<TId>` contract.
 - Standardized the repository on the .NET 10 SDK feature band and C# 14.
 - Centralized NuGet package versions and enabled deterministic locked restore.

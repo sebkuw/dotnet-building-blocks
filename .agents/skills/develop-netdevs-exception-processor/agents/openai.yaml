@@ -1,4 +1,0 @@
-interface:
-  display_name: "Rozwijanie procesora wyjątków"
-  short_description: "Utrzymuj błędy API i identyfikatory korelacji"
-  default_prompt: "Użyj $develop-netdevs-exception-processor, aby zmienić i zweryfikować obsługę błędów API."

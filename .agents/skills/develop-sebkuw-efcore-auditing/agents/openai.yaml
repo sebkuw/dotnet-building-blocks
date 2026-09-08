@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rozwijanie audytu EF Core"
+  short_description: "Utrzymuj audyt encji oparty na EF Core"
+  default_prompt: "Użyj $develop-sebkuw-efcore-auditing, aby zmienić i zweryfikować audyt encji EF Core."

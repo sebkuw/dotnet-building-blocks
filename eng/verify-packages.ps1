@@ -5,11 +5,11 @@ param(
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
-$packages = Get-ChildItem -Path $PackageDirectory -Filter "NetDevs.*.nupkg" |
+$packages = Get-ChildItem -Path $PackageDirectory -Filter "sebkuw.*.nupkg" |
     Where-Object { $_.Name -notlike "*.symbols.nupkg" }
 
 if ($packages.Count -ne 6) {
-    throw "Expected 6 NetDevs packages, found $($packages.Count)."
+    throw "Expected 6 sebkuw packages, found $($packages.Count)."
 }
 
 foreach ($package in $packages) {

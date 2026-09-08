@@ -1,4 +1,4 @@
-# NetDevs Building Blocks
+# sebkuw Building Blocks
 
 Reusable .NET building blocks for Clean Architecture applications.
 
@@ -8,12 +8,12 @@ This repository contains small, focused packages that keep application and domai
 
 - [Packages](#packages)
 - [Repository Structure](#repository-structure)
-- [NetDevs.Domain.Abstractions](#netdevsdomainabstractions)
-- [NetDevs.Cqrs.Abstractions](#netdevscqrsabstractions)
-- [NetDevs.Cqrs](#netdevscqrs)
-- [NetDevs.EntityFrameworkCore.Auditing](#netdevsentityframeworkcoreauditing)
-- [NetDevs.ExceptionProcessor](#netdevsexceptionprocessor)
-- [NetDevs.QueryableProcessor](#netdevsqueryableprocessor)
+- [sebkuw.Domain.Abstractions](#sebkuwdomainabstractions)
+- [sebkuw.Cqrs.Abstractions](#sebkuwcqrsabstractions)
+- [sebkuw.Cqrs](#sebkuwcqrs)
+- [sebkuw.EntityFrameworkCore.Auditing](#sebkuwentityframeworkcoreauditing)
+- [sebkuw.ExceptionProcessor](#sebkuwexceptionprocessor)
+- [sebkuw.QueryableProcessor](#sebkuwqueryableprocessor)
 - [Build](#build)
 - [Tests](#tests)
 - [Project Standards](#project-standards)
@@ -24,42 +24,46 @@ This repository contains small, focused packages that keep application and domai
 
 | Package | Purpose |
 | --- | --- |
-| [`NetDevs.Domain.Abstractions`](src/NetDevs.Domain.Abstractions/README.md) | Base entity, auditing, deactivation, and persistence lifecycle contracts for domain models. |
-| [`NetDevs.Cqrs.Abstractions`](src/NetDevs.Cqrs.Abstractions/README.md) | Dependency-free CQRS contracts for commands, queries and handlers. |
-| [`NetDevs.Cqrs`](src/NetDevs.Cqrs/README.md) | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
-| [`NetDevs.EntityFrameworkCore.Auditing`](src/NetDevs.EntityFrameworkCore.Auditing/README.md) | EF Core interceptors for automatic audit metadata and entity lifecycle enforcement. |
-| [`NetDevs.ExceptionProcessor`](src/NetDevs.ExceptionProcessor/README.md) | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
-| [`NetDevs.QueryableProcessor`](src/NetDevs.QueryableProcessor/README.md) | Dynamic `IQueryable` filtering, sorting, pagination and Angular-compatible response metadata. |
+| [`sebkuw.Domain.Abstractions`](src/sebkuw.Domain.Abstractions/README.md) | Base entity, auditing, deactivation, and persistence lifecycle contracts for domain models. |
+| [`sebkuw.Cqrs.Abstractions`](src/sebkuw.Cqrs.Abstractions/README.md) | Dependency-free CQRS contracts for commands, queries and handlers. |
+| [`sebkuw.Cqrs`](src/sebkuw.Cqrs/README.md) | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
+| [`sebkuw.EntityFrameworkCore.Auditing`](src/sebkuw.EntityFrameworkCore.Auditing/README.md) | EF Core interceptors for automatic audit metadata and entity lifecycle enforcement. |
+| [`sebkuw.ExceptionProcessor`](src/sebkuw.ExceptionProcessor/README.md) | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
+| [`sebkuw.QueryableProcessor`](src/sebkuw.QueryableProcessor/README.md) | Dynamic `IQueryable` filtering, sorting, pagination and Angular-compatible response metadata. |
+
+## Migration to the `sebkuw` package prefix
+
+Version 2.0.0 changes the package identity and namespaces of every library. Replace each existing package reference and `using` directive with the matching `sebkuw.*` name. The solution, production projects, test projects, assembly names, and the auditing extension `AddSebkuwAuditingInterceptors()` use the same prefix.
 
 ## Repository Structure
 
 ```text
 src/
-  NetDevs.Domain.Abstractions/
-  NetDevs.Cqrs.Abstractions/
-  NetDevs.Cqrs/
-  NetDevs.EntityFrameworkCore.Auditing/
-  NetDevs.ExceptionProcessor/
-  NetDevs.QueryableProcessor/
+  sebkuw.Domain.Abstractions/
+  sebkuw.Cqrs.Abstractions/
+  sebkuw.Cqrs/
+  sebkuw.EntityFrameworkCore.Auditing/
+  sebkuw.ExceptionProcessor/
+  sebkuw.QueryableProcessor/
 tests/
-  NetDevs.Cqrs.Abstractions.Tests/
-  NetDevs.Domain.Abstractions.Tests/
-  NetDevs.Cqrs.Tests/
-  NetDevs.EntityFrameworkCore.Auditing.Tests/
-  NetDevs.ExceptionProcessor.Tests/
-  NetDevs.QueryableProcessor.Tests/
+  sebkuw.Cqrs.Abstractions.Tests/
+  sebkuw.Domain.Abstractions.Tests/
+  sebkuw.Cqrs.Tests/
+  sebkuw.EntityFrameworkCore.Auditing.Tests/
+  sebkuw.ExceptionProcessor.Tests/
+  sebkuw.QueryableProcessor.Tests/
 ```
 
-## NetDevs.Domain.Abstractions
+## sebkuw.Domain.Abstractions
 
 ### Purpose
 
-`NetDevs.Domain.Abstractions` provides lightweight base types and contracts for domain entities. It is dependency-free and can be referenced from domain or application projects without bringing in infrastructure packages.
+`sebkuw.Domain.Abstractions` provides lightweight base types and contracts for domain entities. It is dependency-free and can be referenced from domain or application projects without bringing in infrastructure packages.
 
 ### Installation
 
 ```bash
-dotnet add package NetDevs.Domain.Abstractions
+dotnet add package sebkuw.Domain.Abstractions
 ```
 
 ### Included Types
@@ -82,7 +86,7 @@ dotnet add package NetDevs.Domain.Abstractions
 Use `Entity<TId>` when the identifier type is part of your domain design:
 
 ```csharp
-using NetDevs.Domain.Abstractions.Entities;
+using sebkuw.Domain.Abstractions.Entities;
 
 public sealed class Product : Entity<int>
 {
@@ -93,7 +97,7 @@ public sealed class Product : Entity<int>
 Use `GuidEntity` when your domain entity uses a `Guid` identifier:
 
 ```csharp
-using NetDevs.Domain.Abstractions.Entities;
+using sebkuw.Domain.Abstractions.Entities;
 
 public sealed class Customer : GuidEntity
 {
@@ -106,7 +110,7 @@ public sealed class Customer : GuidEntity
 Use `AuditableEntity<TId>` when an entity should expose creation and update metadata:
 
 ```csharp
-using NetDevs.Domain.Abstractions.Auditing;
+using sebkuw.Domain.Abstractions.Auditing;
 
 public sealed class Invoice : AuditableEntity<long>
 {
@@ -117,7 +121,7 @@ public sealed class Invoice : AuditableEntity<long>
 Use `AuditableGuidEntity` for the common `Guid` identifier case:
 
 ```csharp
-using NetDevs.Domain.Abstractions.Auditing;
+using sebkuw.Domain.Abstractions.Auditing;
 
 public sealed class Order : AuditableGuidEntity
 {
@@ -128,9 +132,9 @@ public sealed class Order : AuditableGuidEntity
 Use creation-only auditing for immutable history, and explicit deactivation for entities that must remain available to historical data:
 
 ```csharp
-using NetDevs.Domain.Abstractions.Auditing;
-using NetDevs.Domain.Abstractions.Deactivation;
-using NetDevs.Domain.Abstractions.History;
+using sebkuw.Domain.Abstractions.Auditing;
+using sebkuw.Domain.Abstractions.Deactivation;
+using sebkuw.Domain.Abstractions.History;
 
 public sealed class PriceHistory : CreatedAuditableEntity<Guid>, IAppendOnlyEntity;
 
@@ -143,16 +147,16 @@ public sealed class Product : DeactivatableAuditableEntity<Guid>;
 - `UpdatedBy` and `UpdatedAt` are nullable because new entities may not have been updated yet.
 - Audit values are intentionally simple so they can be filled by application services, EF Core interceptors, pipeline behaviors or other infrastructure code.
 
-## NetDevs.Cqrs.Abstractions
+## sebkuw.Cqrs.Abstractions
 
 ### Purpose
 
-`NetDevs.Cqrs.Abstractions` defines contracts for commands, queries and handlers. The package does not depend on a mediator library, which keeps application contracts portable and easy to test.
+`sebkuw.Cqrs.Abstractions` defines contracts for commands, queries and handlers. The package does not depend on a mediator library, which keeps application contracts portable and easy to test.
 
 ### Installation
 
 ```bash
-dotnet add package NetDevs.Cqrs.Abstractions
+dotnet add package sebkuw.Cqrs.Abstractions
 ```
 
 ### Included Types
@@ -169,7 +173,7 @@ dotnet add package NetDevs.Cqrs.Abstractions
 Use `ICommand` for operations that do not return a value:
 
 ```csharp
-using NetDevs.Cqrs.Abstractions;
+using sebkuw.Cqrs.Abstractions;
 
 public sealed record DeleteUserCommand(Guid UserId) : ICommand;
 
@@ -188,7 +192,7 @@ public sealed class DeleteUserCommandHandler
 Use `ICommand<TResponse>` for operations that return a value:
 
 ```csharp
-using NetDevs.Cqrs.Abstractions;
+using sebkuw.Cqrs.Abstractions;
 
 public sealed record CreateUserCommand(string Email) : ICommand<Guid>;
 
@@ -209,7 +213,7 @@ public sealed class CreateUserCommandHandler
 Use `IQuery<TResponse>` for read operations:
 
 ```csharp
-using NetDevs.Cqrs.Abstractions;
+using sebkuw.Cqrs.Abstractions;
 
 public sealed record GetUserByIdQuery(Guid UserId) : IQuery<UserDto?>;
 
@@ -231,16 +235,16 @@ public sealed class GetUserByIdQueryHandler
 - Handlers receive a `CancellationToken` by design.
 - The abstractions can be used with a custom dispatcher, a mediator, direct DI resolution or pipeline behaviors.
 
-## NetDevs.Cqrs
+## sebkuw.Cqrs
 
 ### Purpose
 
-`NetDevs.Cqrs` registers CQRS handlers from selected assemblies into `Microsoft.Extensions.DependencyInjection`. It uses Scrutor for assembly scanning.
+`sebkuw.Cqrs` registers CQRS handlers from selected assemblies into `Microsoft.Extensions.DependencyInjection`. It uses Scrutor for assembly scanning.
 
 ### Installation
 
 ```bash
-dotnet add package NetDevs.Cqrs
+dotnet add package sebkuw.Cqrs
 ```
 
 ### Register One Assembly
@@ -248,7 +252,7 @@ dotnet add package NetDevs.Cqrs
 Use the shortcut when handlers live in one assembly:
 
 ```csharp
-using NetDevs.Cqrs;
+using sebkuw.Cqrs;
 
 builder.Services.AddCqrsFromAssemblyContaining<CreateUserCommandHandler>();
 ```
@@ -258,7 +262,7 @@ builder.Services.AddCqrsFromAssemblyContaining<CreateUserCommandHandler>();
 Use the options delegate when handlers are split across modules:
 
 ```csharp
-using NetDevs.Cqrs;
+using sebkuw.Cqrs;
 
 builder.Services.AddCqrs(options =>
 {
@@ -288,16 +292,16 @@ Handlers are registered:
 - Register handlers in the application composition root, usually where `IServiceCollection` is configured.
 - Keep command and query definitions in application modules, then register those modules explicitly.
 
-## NetDevs.EntityFrameworkCore.Auditing
+## sebkuw.EntityFrameworkCore.Auditing
 
 ### Purpose
 
-`NetDevs.EntityFrameworkCore.Auditing` fills audit metadata for EF Core entities during `SaveChanges` and `SaveChangesAsync`. It is built around an EF Core `SaveChangesInterceptor` and the auditing contracts from `NetDevs.Domain.Abstractions`.
+`sebkuw.EntityFrameworkCore.Auditing` fills audit metadata for EF Core entities during `SaveChanges` and `SaveChangesAsync`. It is built around an EF Core `SaveChangesInterceptor` and the auditing contracts from `sebkuw.Domain.Abstractions`.
 
 ### Installation
 
 ```bash
-dotnet add package NetDevs.EntityFrameworkCore.Auditing
+dotnet add package sebkuw.EntityFrameworkCore.Auditing
 ```
 
 ### Included Types
@@ -316,7 +320,7 @@ dotnet add package NetDevs.EntityFrameworkCore.Auditing
 The package does not assume how your application identifies users. Provide an implementation of `ICurrentUserProvider` in your application layer or infrastructure layer:
 
 ```csharp
-using NetDevs.EntityFrameworkCore.Auditing.Abstractions;
+using sebkuw.EntityFrameworkCore.Auditing.Abstractions;
 
 public sealed class CurrentUserProvider : ICurrentUserProvider
 {
@@ -332,8 +336,8 @@ public sealed class CurrentUserProvider : ICurrentUserProvider
 Register the current user provider and the auditing services in the composition root:
 
 ```csharp
-using NetDevs.EntityFrameworkCore.Auditing.Abstractions;
-using NetDevs.EntityFrameworkCore.Auditing.Extensions;
+using sebkuw.EntityFrameworkCore.Auditing.Abstractions;
+using sebkuw.EntityFrameworkCore.Auditing.Extensions;
 
 builder.Services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
 builder.Services.AddEfCoreAuditing();
@@ -344,13 +348,13 @@ builder.Services.AddEfCoreAuditing();
 Resolve `AuditSaveChangesInterceptor` from DI and attach it to your EF Core context:
 
 ```csharp
-using NetDevs.EntityFrameworkCore.Auditing.Interceptors;
+using sebkuw.EntityFrameworkCore.Auditing.Interceptors;
 
 builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
 {
     options
         .UseSqlServer(connectionString)
-        .AddNetDevsAuditingInterceptors(serviceProvider);
+        .AddSebkuwAuditingInterceptors(serviceProvider);
 });
 ```
 
@@ -371,7 +375,7 @@ The lifecycle interceptor rejects physical deletion of `IHardDeleteProtected` en
 ### Example Entity
 
 ```csharp
-using NetDevs.Domain.Abstractions.Auditing;
+using sebkuw.Domain.Abstractions.Auditing;
 
 public sealed class Customer : AuditableGuidEntity
 {
@@ -385,16 +389,16 @@ public sealed class Customer : AuditableGuidEntity
 - You can replace `IDateTimeProvider` in tests or applications that need deterministic time.
 - The interceptor only touches tracked entities in `Added` or `Modified` state.
 
-## NetDevs.ExceptionProcessor
+## sebkuw.ExceptionProcessor
 
 ### Purpose
 
-`NetDevs.ExceptionProcessor` converts exceptions into consistent JSON API responses. It includes a base exception contract for application-specific errors, ready-made exception types, NLog-based exception logging, a global exception middleware and a correlation ID middleware.
+`sebkuw.ExceptionProcessor` converts exceptions into consistent JSON API responses. It includes a base exception contract for application-specific errors, ready-made exception types, NLog-based exception logging, a global exception middleware and a correlation ID middleware.
 
 ### Installation
 
 ```bash
-dotnet add package NetDevs.ExceptionProcessor
+dotnet add package sebkuw.ExceptionProcessor
 ```
 
 ### Included Types
@@ -414,8 +418,8 @@ dotnet add package NetDevs.ExceptionProcessor
 Register the exception manager and logger in the application composition root:
 
 ```csharp
-using NetDevs.ExceptionProcessor;
-using NetDevs.ExceptionProcessor.Loggers;
+using sebkuw.ExceptionProcessor;
+using sebkuw.ExceptionProcessor.Loggers;
 
 builder.Services.AddScoped<IExceptionManager, ExceptionManager>();
 builder.Services.AddSingleton<IExceptionLogger, ExceptionLogger>();
@@ -424,7 +428,7 @@ builder.Services.AddSingleton<IExceptionLogger, ExceptionLogger>();
 Initialize the NLog logger from configuration during startup:
 
 ```csharp
-using NetDevs.ExceptionProcessor.Loggers;
+using sebkuw.ExceptionProcessor.Loggers;
 
 ExceptionLogger.Initialize(builder.Configuration);
 ```
@@ -446,7 +450,7 @@ Example configuration:
 Add the correlation ID middleware before the global exception middleware:
 
 ```csharp
-using NetDevs.ExceptionProcessor.Middlewares;
+using sebkuw.ExceptionProcessor.Middlewares;
 
 app.UseMiddleware<TraceIdMiddleware>();
 app.UseMiddleware<GlobalExceptionMiddleware>();
@@ -459,7 +463,7 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 Use the built-in exceptions for common API failures:
 
 ```csharp
-using NetDevs.ExceptionProcessor.Exceptions.Custom;
+using sebkuw.ExceptionProcessor.Exceptions.Custom;
 
 throw new ObjectNotFoundException("User", userId);
 ```
@@ -482,7 +486,7 @@ The global middleware returns a response similar to:
 Derive from `BaseException` when an application needs its own error code and HTTP status:
 
 ```csharp
-using NetDevs.ExceptionProcessor.Exceptions.Base;
+using sebkuw.ExceptionProcessor.Exceptions.Base;
 
 public sealed class DuplicateEmailException : BaseException
 {
@@ -504,16 +508,16 @@ public sealed class DuplicateEmailException : BaseException
 - `ExceptionResponse.Timestamp` is set in UTC when the response is created.
 - `GlobalExceptionMiddleware` writes JSON with camel-case property names and includes the correlation ID in both the response body and header.
 
-## NetDevs.QueryableProcessor
+## sebkuw.QueryableProcessor
 
 ### Purpose
 
-`NetDevs.QueryableProcessor` applies filtering, sorting, pagination and projection to `IQueryable<T>` sources. It is useful for API list endpoints that accept query options and should return consistent pagination metadata.
+`sebkuw.QueryableProcessor` applies filtering, sorting, pagination and projection to `IQueryable<T>` sources. It is useful for API list endpoints that accept query options and should return consistent pagination metadata.
 
 ### Installation
 
 ```bash
-dotnet add package NetDevs.QueryableProcessor
+dotnet add package sebkuw.QueryableProcessor
 ```
 
 ### Included Types
@@ -533,8 +537,8 @@ dotnet add package NetDevs.QueryableProcessor
 Create a request with optional filters and sorting plus required pagination options:
 
 ```csharp
-using NetDevs.QueryableProcessor.Enums;
-using NetDevs.QueryableProcessor.Models;
+using sebkuw.QueryableProcessor.Enums;
+using sebkuw.QueryableProcessor.Models;
 
 var request = new RequestDto
 {
@@ -563,7 +567,7 @@ var request = new RequestDto
 Use `SolveRequest` to apply filters, sorting, pagination and projection in one call:
 
 ```csharp
-using NetDevs.QueryableProcessor.Solvers;
+using sebkuw.QueryableProcessor.Solvers;
 
 PaginationResponse<ArticleListItem> response = await dbContext.Articles
     .SolveRequest(
@@ -617,13 +621,13 @@ The legacy `asc_Name` and `desc_Category.Name` forms remain supported. Nested pa
 ## Build
 
 ```bash
-dotnet build NetDevs.BuildingBlocks.slnx
+dotnet build sebkuw.BuildingBlocks.slnx
 ```
 
 ## Tests
 
 ```bash
-dotnet test NetDevs.BuildingBlocks.slnx
+dotnet test sebkuw.BuildingBlocks.slnx
 ```
 
 The test projects cover:

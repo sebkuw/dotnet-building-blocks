@@ -5,7 +5,7 @@
 - Ten plik obowiązuje w całym repozytorium.
 - Przed zmianą biblioteki przeczytaj także jej `src/<library>/AGENTS.md`, `README.md`, `CHANGELOG.md`, plik projektu oraz odpowiadający projekt w `tests/`.
 - Instrukcje położone bliżej zmienianego pliku uzupełniają ten dokument i mają pierwszeństwo w razie konfliktu.
-- Dla zmian przekrojowych użyj skilla `develop-dotnet-building-blocks`; dla pojedynczej biblioteki użyj również odpowiadającego jej skilla `develop-netdevs-*`.
+- Dla zmian przekrojowych użyj skilla `develop-dotnet-building-blocks`; dla pojedynczej biblioteki użyj również odpowiadającego jej skilla `develop-sebkuw-*`.
 - Nie modyfikuj wygenerowanych katalogów `bin/`, `obj/`, `artifacts/`, `.vs/` ani plików paczek NuGet.
 - Zachowuj niezwiązane i niezacommitowane zmiany użytkownika.
 
@@ -69,13 +69,13 @@
 - Przed zakończeniem zmiany biblioteki uruchom jej testy, kompilację i pakowanie. Dla zmiany przekrojowej uruchom pełny zestaw:
 
 ```powershell
-dotnet restore NetDevs.BuildingBlocks.slnx
+dotnet restore sebkuw.BuildingBlocks.slnx
 ./eng/verify-package-licenses.ps1
-dotnet format NetDevs.BuildingBlocks.slnx --verify-no-changes --no-restore
-dotnet build NetDevs.BuildingBlocks.slnx --configuration Release --no-restore
-dotnet test NetDevs.BuildingBlocks.slnx --configuration Release --no-build --settings coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory artifacts/TestResults
+dotnet format sebkuw.BuildingBlocks.slnx --verify-no-changes --no-restore
+dotnet build sebkuw.BuildingBlocks.slnx --configuration Release --no-restore
+dotnet test sebkuw.BuildingBlocks.slnx --configuration Release --no-build --settings coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory artifacts/TestResults
 ./eng/verify-coverage.ps1
-dotnet pack NetDevs.BuildingBlocks.slnx --configuration Release --no-build --output artifacts/packages
+dotnet pack sebkuw.BuildingBlocks.slnx --configuration Release --no-build --output artifacts/packages
 ./eng/verify-packages.ps1
 ```
 

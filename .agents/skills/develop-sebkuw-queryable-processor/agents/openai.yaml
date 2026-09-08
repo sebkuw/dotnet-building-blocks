@@ -1,0 +1,4 @@
+interface:
+  display_name: "Rozwijanie procesora zapytań"
+  short_description: "Utrzymuj filtrowanie, sortowanie i paginację"
+  default_prompt: "Użyj $develop-sebkuw-queryable-processor, aby zmienić i zweryfikować filtrowanie, sortowanie oraz paginację."

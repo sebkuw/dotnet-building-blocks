@@ -7,12 +7,12 @@ param(
 $ErrorActionPreference = "Stop"
 
 $requiredPackages = @(
-    "NetDevs.Cqrs.Abstractions",
-    "NetDevs.Cqrs",
-    "NetDevs.Domain.Abstractions",
-    "NetDevs.EntityFrameworkCore.Auditing",
-    "NetDevs.ExceptionProcessor",
-    "NetDevs.QueryableProcessor"
+    "sebkuw.Cqrs.Abstractions",
+    "sebkuw.Cqrs",
+    "sebkuw.Domain.Abstractions",
+    "sebkuw.EntityFrameworkCore.Auditing",
+    "sebkuw.ExceptionProcessor",
+    "sebkuw.QueryableProcessor"
 )
 
 $reports = Get-ChildItem -Path $ResultsDirectory -Filter "coverage.cobertura.xml" -Recurse
