@@ -7,11 +7,16 @@ All notable changes to `NetDevs.EntityFrameworkCore.Auditing` are documented her
 ### Added
 
 - Package-specific documentation, development instructions, changelog, and quality workflow.
+- `EntityLifecycleInterceptor` enforcing hard-delete protection and append-only updates for tracked entities.
+- `HardDeleteNotAllowedException` and `AppendOnlyEntityModificationException`.
+- `AddNetDevsAuditingInterceptors()` for attaching the complete auditing and lifecycle pipeline to a `DbContext`.
 
 ### Changed
 
 - Centralized EF Core and dependency-injection package versions.
 - Declared the package's MIT license in NuGet metadata.
+- `AddEfCoreAuditing()` now registers the lifecycle interceptor in addition to the audit interceptor.
+- Advanced the package version to `1.1.0` for the additive public API.
 
 ## [1.0.0] - 2026-08-11
 

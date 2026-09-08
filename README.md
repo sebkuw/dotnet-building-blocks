@@ -24,10 +24,10 @@ This repository contains small, focused packages that keep application and domai
 
 | Package | Purpose |
 | --- | --- |
-| [`NetDevs.Domain.Abstractions`](src/NetDevs.Domain.Abstractions/README.md) | Base entity and auditing contracts for domain models. |
+| [`NetDevs.Domain.Abstractions`](src/NetDevs.Domain.Abstractions/README.md) | Base entity, auditing, deactivation, and persistence lifecycle contracts for domain models. |
 | [`NetDevs.Cqrs.Abstractions`](src/NetDevs.Cqrs.Abstractions/README.md) | Dependency-free CQRS contracts for commands, queries and handlers. |
 | [`NetDevs.Cqrs`](src/NetDevs.Cqrs/README.md) | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
-| [`NetDevs.EntityFrameworkCore.Auditing`](src/NetDevs.EntityFrameworkCore.Auditing/README.md) | EF Core `SaveChangesInterceptor` for automatic audit metadata. |
+| [`NetDevs.EntityFrameworkCore.Auditing`](src/NetDevs.EntityFrameworkCore.Auditing/README.md) | EF Core interceptors for automatic audit metadata and entity lifecycle enforcement. |
 | [`NetDevs.ExceptionProcessor`](src/NetDevs.ExceptionProcessor/README.md) | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
 | [`NetDevs.QueryableProcessor`](src/NetDevs.QueryableProcessor/README.md) | Dynamic `IQueryable` filtering, sorting, pagination and Angular-compatible response metadata. |
 
@@ -69,8 +69,13 @@ dotnet add package NetDevs.Domain.Abstractions
 - `GuidEntity`
 - `ICreatedEntity`
 - `IUpdatedEntity`
+- `CreatedAuditableEntity<TId>`
 - `AuditableEntity<TId>`
 - `AuditableGuidEntity`
+- `IHardDeleteProtected`
+- `IDeactivatable`
+- `DeactivatableAuditableEntity<TId>`
+- `IAppendOnlyEntity`
 
 ### Basic Entity
 
@@ -118,6 +123,18 @@ public sealed class Order : AuditableGuidEntity
 {
     public string Number { get; set; } = string.Empty;
 }
+```
+
+Use creation-only auditing for immutable history, and explicit deactivation for entities that must remain available to historical data:
+
+```csharp
+using NetDevs.Domain.Abstractions.Auditing;
+using NetDevs.Domain.Abstractions.Deactivation;
+using NetDevs.Domain.Abstractions.History;
+
+public sealed class PriceHistory : CreatedAuditableEntity<Guid>, IAppendOnlyEntity;
+
+public sealed class Product : DeactivatableAuditableEntity<Guid>;
 ```
 
 ### Notes
@@ -286,6 +303,9 @@ dotnet add package NetDevs.EntityFrameworkCore.Auditing
 ### Included Types
 
 - `AuditSaveChangesInterceptor`
+- `EntityLifecycleInterceptor`
+- `HardDeleteNotAllowedException`
+- `AppendOnlyEntityModificationException`
 - `IDateTimeProvider`
 - `ICurrentUserProvider`
 - `SystemDateTimeProvider`
@@ -330,8 +350,7 @@ builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
 {
     options
         .UseSqlServer(connectionString)
-        .AddInterceptors(
-            serviceProvider.GetRequiredService<AuditSaveChangesInterceptor>());
+        .AddNetDevsAuditingInterceptors(serviceProvider);
 });
 ```
 
@@ -346,6 +365,8 @@ For entities implementing `IUpdatedEntity`:
 
 - `UpdatedBy` and `UpdatedAt` stay empty when the entity is first added.
 - `UpdatedBy` and `UpdatedAt` are set when the entity is modified.
+
+The lifecycle interceptor rejects physical deletion of `IHardDeleteProtected` entities and rejects updates and deletes of `IAppendOnlyEntity` records. Deactivation is an explicit domain update; no delete is silently converted and no global active-only query filter is installed.
 
 ### Example Entity
 

@@ -1,5 +1,8 @@
 using NetDevs.Domain.Abstractions.Auditing;
+using NetDevs.Domain.Abstractions.Deactivation;
 using NetDevs.Domain.Abstractions.Entities;
+using NetDevs.Domain.Abstractions.History;
+using NetDevs.Domain.Abstractions.Persistence;
 
 using Xunit;
 
@@ -27,6 +30,103 @@ public sealed class DomainAbstractionsTests
         Assert.IsType<ICreatedEntity>(entity, exactMatch: false);
         Assert.IsType<IUpdatedEntity>(entity, exactMatch: false);
         Assert.IsType<IEntity<Guid>>(entity, exactMatch: false);
+        Assert.IsAssignableFrom<CreatedAuditableEntity<Guid>>(entity);
+    }
+
+    [Fact]
+    public void CreatedAuditableEntity_exposes_only_creation_audit_contract()
+    {
+        var entity = new TestCreatedAuditableEntity
+        {
+            Id = 42,
+            CreatedBy = "creator",
+            CreatedAt = new DateTimeOffset(2026, 9, 8, 8, 0, 0, TimeSpan.Zero)
+        };
+
+        Assert.IsAssignableFrom<ICreatedEntity>(entity);
+        Assert.IsNotAssignableFrom<IUpdatedEntity>(entity);
+        Assert.Equal(42, entity.Id);
+        Assert.Equal("creator", entity.CreatedBy);
+    }
+
+    [Fact]
+    public void Lifecycle_contracts_protect_hard_delete()
+    {
+        Assert.Contains(typeof(IHardDeleteProtected), typeof(IDeactivatable).GetInterfaces());
+        Assert.Contains(typeof(IHardDeleteProtected), typeof(IAppendOnlyEntity).GetInterfaces());
+    }
+
+    [Fact]
+    public void Deactivatable_entity_is_active_by_default()
+    {
+        var entity = new TestDeactivatableEntity();
+
+        Assert.True(entity.IsActive);
+        Assert.Null(entity.DeactivatedBy);
+        Assert.Null(entity.DeactivatedAt);
+    }
+
+    [Fact]
+    public void Deactivate_records_current_deactivation_and_is_idempotent()
+    {
+        var entity = new TestDeactivatableEntity();
+        Guid firstUserId = Guid.NewGuid();
+        Guid secondUserId = Guid.NewGuid();
+        var firstDeactivation = new DateTimeOffset(2026, 9, 8, 8, 0, 0, TimeSpan.Zero);
+
+        entity.Deactivate(firstUserId, firstDeactivation);
+        entity.Deactivate(secondUserId, firstDeactivation.AddHours(1));
+
+        Assert.False(entity.IsActive);
+        Assert.Equal(firstUserId, entity.DeactivatedBy);
+        Assert.Equal(firstDeactivation, entity.DeactivatedAt);
+    }
+
+    [Fact]
+    public void Reactivate_restores_active_state_and_clears_deactivation_metadata()
+    {
+        var entity = new TestDeactivatableEntity();
+        entity.Deactivate(
+            Guid.NewGuid(),
+            new DateTimeOffset(2026, 9, 8, 8, 0, 0, TimeSpan.Zero));
+
+        entity.Reactivate();
+        entity.Reactivate();
+
+        Assert.True(entity.IsActive);
+        Assert.Null(entity.DeactivatedBy);
+        Assert.Null(entity.DeactivatedAt);
+    }
+
+    [Fact]
+    public void Deactivate_rejects_empty_user_identifier()
+    {
+        var entity = new TestDeactivatableEntity();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            entity.Deactivate(Guid.Empty, DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public void Deactivate_rejects_non_utc_timestamp()
+    {
+        var entity = new TestDeactivatableEntity();
+        var localTimestamp = new DateTimeOffset(2026, 9, 8, 10, 0, 0, TimeSpan.FromHours(2));
+
+        Assert.Throws<ArgumentException>(() =>
+            entity.Deactivate(Guid.NewGuid(), localTimestamp));
+    }
+
+    [Fact]
+    public void Domain_abstractions_do_not_reference_entity_framework_core()
+    {
+        string[] references = typeof(IEntity<>).Assembly
+            .GetReferencedAssemblies()
+            .Select(reference => reference.Name ?? string.Empty)
+            .ToArray();
+
+        Assert.DoesNotContain(references, name =>
+            name.StartsWith("Microsoft.EntityFrameworkCore", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -53,4 +153,8 @@ public sealed class DomainAbstractionsTests
     private sealed class TestGuidEntity : GuidEntity;
 
     private sealed class TestAuditableGuidEntity : AuditableGuidEntity;
+
+    private sealed class TestCreatedAuditableEntity : CreatedAuditableEntity<int>;
+
+    private sealed class TestDeactivatableEntity : DeactivatableAuditableEntity<Guid>;
 }
