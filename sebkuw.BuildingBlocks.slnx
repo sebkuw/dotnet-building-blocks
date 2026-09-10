@@ -5,6 +5,7 @@
     <Project Path="src/sebkuw.Domain.Abstractions/sebkuw.Domain.Abstractions.csproj" Id="90bd8846-6748-48c4-9cd8-6bc2bc1e4d2c" />
     <Project Path="src/sebkuw.EntityFrameworkCore.Auditing/sebkuw.EntityFrameworkCore.Auditing.csproj" Id="3d8d7802-b4f5-4cc7-9c15-d68f03de6f05" />
     <Project Path="src/sebkuw.ExceptionProcessor/sebkuw.ExceptionProcessor.csproj" Id="683ae478-33e9-481e-a92c-0f7fa821cb8a" />
+    <Project Path="src/sebkuw.ImportProcessor/sebkuw.ImportProcessor.csproj" />
     <Project Path="src/sebkuw.QueryableProcessor/sebkuw.QueryableProcessor.csproj" />
   </Folder>
   <Folder Name="/tests/">
@@ -13,6 +14,7 @@
     <Project Path="tests/sebkuw.Domain.Abstractions.Tests/sebkuw.Domain.Abstractions.Tests.csproj" />
     <Project Path="tests/sebkuw.EntityFrameworkCore.Auditing.Tests/sebkuw.EntityFrameworkCore.Auditing.Tests.csproj" />
 	<Project Path="tests/sebkuw.ExceptionProcessor.Tests/sebkuw.ExceptionProcessor.Tests.csproj" />
+    <Project Path="tests/sebkuw.ImportProcessor.Tests/sebkuw.ImportProcessor.Tests.csproj" />
     <Project Path="tests/sebkuw.QueryableProcessor.Tests/sebkuw.QueryableProcessor.Tests.csproj" />
   </Folder>
 </Solution>

@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- The new `sebkuw.ImportProcessor` package for streaming, domain-neutral CSV imports with mapping, conversion, validation, preview, batch reporting, application-owned persistence, and idempotency extension points.
 - Reusable entity lifecycle contracts for hard-delete protection, deactivation, and append-only records.
 - EF Core lifecycle enforcement integrated with the existing auditing registration pipeline.
 - Hierarchical `AGENTS.md` guidance for the repository, tests, and every production library.
@@ -19,6 +20,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Advanced the pinned .NET 10 SDK feature band to 10.0.400 so patched .NET tooling can be selected.
+- Updated the existing build-only Source Link dependency to the patched .NET 10 line after the previous transitive Git build task was flagged by NuGet audit.
 - Renamed every library, NuGet package, assembly, namespace, project, test project, solution reference, and repository development skill from the previous package prefix to `sebkuw`.
 - Advanced all packages to version 2.0.0 because consumers must replace their package references and namespace imports with the corresponding `sebkuw.*` names.
 - Split creation-only audit metadata into `CreatedAuditableEntity<TId>` while preserving the public `AuditableEntity<TId>` contract.
