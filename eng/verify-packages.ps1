@@ -8,8 +8,8 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 $packages = Get-ChildItem -Path $PackageDirectory -Filter "sebkuw.*.nupkg" |
     Where-Object { $_.Name -notlike "*.symbols.nupkg" }
 
-if ($packages.Count -ne 6) {
-    throw "Expected 6 sebkuw packages, found $($packages.Count)."
+if ($packages.Count -ne 7) {
+    throw "Expected 7 sebkuw packages, found $($packages.Count)."
 }
 
 foreach ($package in $packages) {

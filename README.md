@@ -13,6 +13,7 @@ This repository contains small, focused packages that keep application and domai
 - [sebkuw.Cqrs](#sebkuwcqrs)
 - [sebkuw.EntityFrameworkCore.Auditing](#sebkuwentityframeworkcoreauditing)
 - [sebkuw.ExceptionProcessor](#sebkuwexceptionprocessor)
+- [sebkuw.ImportProcessor](#sebkuwimportprocessor)
 - [sebkuw.QueryableProcessor](#sebkuwqueryableprocessor)
 - [Build](#build)
 - [Tests](#tests)
@@ -29,6 +30,7 @@ This repository contains small, focused packages that keep application and domai
 | [`sebkuw.Cqrs`](src/sebkuw.Cqrs/README.md) | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
 | [`sebkuw.EntityFrameworkCore.Auditing`](src/sebkuw.EntityFrameworkCore.Auditing/README.md) | EF Core interceptors for automatic audit metadata and entity lifecycle enforcement. |
 | [`sebkuw.ExceptionProcessor`](src/sebkuw.ExceptionProcessor/README.md) | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
+| [`sebkuw.ImportProcessor`](src/sebkuw.ImportProcessor/README.md) | Streaming, domain-neutral CSV imports with typed mapping, validation, preview, reporting and idempotency hooks. |
 | [`sebkuw.QueryableProcessor`](src/sebkuw.QueryableProcessor/README.md) | Dynamic `IQueryable` filtering, sorting, pagination and Angular-compatible response metadata. |
 
 ## Migration to the `sebkuw` package prefix
@@ -44,6 +46,7 @@ src/
   sebkuw.Cqrs/
   sebkuw.EntityFrameworkCore.Auditing/
   sebkuw.ExceptionProcessor/
+  sebkuw.ImportProcessor/
   sebkuw.QueryableProcessor/
 tests/
   sebkuw.Cqrs.Abstractions.Tests/
@@ -51,6 +54,7 @@ tests/
   sebkuw.Cqrs.Tests/
   sebkuw.EntityFrameworkCore.Auditing.Tests/
   sebkuw.ExceptionProcessor.Tests/
+  sebkuw.ImportProcessor.Tests/
   sebkuw.QueryableProcessor.Tests/
 ```
 
@@ -507,6 +511,22 @@ public sealed class DuplicateEmailException : BaseException
 - Unknown exceptions are returned as `UnhandledException` with HTTP 500.
 - `ExceptionResponse.Timestamp` is set in UTC when the response is created.
 - `GlobalExceptionMiddleware` writes JSON with camel-case property names and includes the correlation ID in both the response body and header.
+
+## sebkuw.ImportProcessor
+
+`sebkuw.ImportProcessor` provides a reusable CSV import pipeline with streaming parsing, generic typed mapping, culture-aware conversion, asynchronous row validation, preview mode, detailed batch reports, and extension points for application-owned persistence and idempotency. It has no dependency on a domain model, ORM, or database.
+
+```csharp
+var map = new ImportMap<ProductRow>(() => new ProductRow())
+    .Map("sku", row => row.Sku)
+    .Map("price", row => row.Price)
+    .UseIdempotencyKey(row => row.Sku);
+
+var batch = await new ImportProcessor<ProductRow>(map, writer, idempotencyStore)
+    .ProcessAsync(csvStream, new ImportOptions { Preview = true }, cancellationToken);
+```
+
+See the [package documentation](src/sebkuw.ImportProcessor/README.md) for mapping, validation, execution, and extension-point details.
 
 ## sebkuw.QueryableProcessor
 

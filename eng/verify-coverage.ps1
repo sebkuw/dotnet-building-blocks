@@ -12,6 +12,7 @@ $requiredPackages = @(
     "sebkuw.Domain.Abstractions",
     "sebkuw.EntityFrameworkCore.Auditing",
     "sebkuw.ExceptionProcessor",
+    "sebkuw.ImportProcessor",
     "sebkuw.QueryableProcessor"
 )
 
