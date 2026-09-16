@@ -1,0 +1,111 @@
+name: Publish GitHub Packages
+
+run-name: Publish sebkuw.* from ${{ inputs.source_sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: Full commit SHA from the main branch to build and publish
+        required: true
+        default: "9aefe4b63b82a15cbbec5c97767a9788852e41f3"
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-github-packages-${{ inputs.source_sha }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      SOURCE_SHA: ${{ inputs.source_sha }}
+
+    steps:
+      - name: Checkout release tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          path: release-tooling
+          persist-credentials: false
+
+      - name: Validate release source
+        shell: pwsh
+        run: |
+          if ($env:SOURCE_SHA -cnotmatch '^[0-9a-f]{40}$') {
+            throw "Source must be an immutable, full lowercase commit SHA."
+          }
+
+          git -C release-tooling merge-base --is-ancestor $env:SOURCE_SHA HEAD
+          if ($LASTEXITCODE -ne 0) {
+            throw "Source commit must belong to the current default-branch history."
+          }
+
+      - name: Checkout release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.source_sha }}
+          path: release-source
+          persist-credentials: false
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.400
+
+      - name: Restore locked dependencies
+        working-directory: release-source
+        run: dotnet restore sebkuw.BuildingBlocks.slnx --locked-mode
+
+      - name: Verify dependency licenses
+        shell: pwsh
+        run: ./release-tooling/eng/verify-package-licenses.ps1 -RepositoryRoot ./release-source
+
+      - name: Verify formatting
+        working-directory: release-source
+        run: dotnet format sebkuw.BuildingBlocks.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        working-directory: release-source
+        run: dotnet build sebkuw.BuildingBlocks.slnx --configuration Release --no-restore
+
+      - name: Test with coverage
+        working-directory: release-source
+        run: dotnet test sebkuw.BuildingBlocks.slnx --configuration Release --no-build --settings coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory artifacts/TestResults
+
+      - name: Verify coverage thresholds
+        shell: pwsh
+        working-directory: release-source
+        run: ./eng/verify-coverage.ps1
+
+      - name: Pack
+        working-directory: release-source
+        run: dotnet pack sebkuw.BuildingBlocks.slnx --configuration Release --no-build --output artifacts/packages
+
+      - name: Verify package contents and provenance
+        shell: pwsh
+        run: ./release-tooling/eng/verify-packages.ps1 -PackageDirectory ./release-source/artifacts/packages -ProjectDirectory ./release-source/src -ExpectedRepositoryCommit $env:SOURCE_SHA
+
+      - name: Publish packages
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $source = "https://nuget.pkg.github.com/$env:GITHUB_REPOSITORY_OWNER/index.json"
+          $packages = Get-ChildItem -Path release-source/artifacts/packages -Filter "sebkuw.*.nupkg" |
+            Where-Object { $_.Name -notlike "*.symbols.nupkg" } |
+            Sort-Object Name
+
+          foreach ($package in $packages) {
+            dotnet nuget push $package.FullName --source $source --api-key $env:GITHUB_TOKEN --skip-duplicate
+            if ($LASTEXITCODE -ne 0) {
+              throw "Publishing '$($package.Name)' failed with exit code $LASTEXITCODE."
+            }
+          }
