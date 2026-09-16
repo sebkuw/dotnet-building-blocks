@@ -37,13 +37,7 @@ public static class RequestSolver
         ArgumentNullException.ThrowIfNull(request.PaginationOptions);
         ArgumentNullException.ThrowIfNull(selector);
 
-        // Apply filters if provided
-        if (request.Filters != null && request.Filters.Any())
-            source = source.ApplyFilters(request.Filters);
-
-        // Apply sorting if specified
-        if (!string.IsNullOrWhiteSpace(request.SortParam))
-            source = source.SortBy(request.SortParam);
+        source = source.ApplyRequest(request, includePagination: false);
 
         // Get total count before pagination
         int totalItems = await source.CountAsync(cancellationToken);

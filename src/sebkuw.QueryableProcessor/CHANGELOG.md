@@ -8,6 +8,7 @@ All notable changes to `sebkuw.QueryableProcessor` are documented here. The form
 
 - Contract tests and documentation for `@netdevs/shared-ui-list` requests and responses.
 - Package-specific development instructions and quality workflow.
+- `ApplyRequest` query composition for reuse by export and other pipelines, with optional pagination.
 
 ### Changed
 

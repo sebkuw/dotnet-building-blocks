@@ -2,7 +2,7 @@
 
 Reusable .NET building blocks for Clean Architecture applications.
 
-This repository contains small, focused packages that keep application and domain code independent from infrastructure concerns. The current packages cover domain entities, auditing contracts, CQRS contracts, CQRS handler registration for Microsoft dependency injection, EF Core auditing, API exception processing and dynamic query processing.
+This repository contains small, focused packages that keep application and domain code independent from infrastructure concerns. The current packages cover domain entities, auditing contracts, CQRS contracts, CQRS handler registration for Microsoft dependency injection, EF Core auditing, API exception processing, CSV import and export, and dynamic query processing.
 
 ## Table of Contents
 
@@ -13,6 +13,7 @@ This repository contains small, focused packages that keep application and domai
 - [sebkuw.Cqrs](#sebkuwcqrs)
 - [sebkuw.EntityFrameworkCore.Auditing](#sebkuwentityframeworkcoreauditing)
 - [sebkuw.ExceptionProcessor](#sebkuwexceptionprocessor)
+- [sebkuw.ExportProcessor](#sebkuwexportprocessor)
 - [sebkuw.ImportProcessor](#sebkuwimportprocessor)
 - [sebkuw.QueryableProcessor](#sebkuwqueryableprocessor)
 - [Build](#build)
@@ -30,6 +31,7 @@ This repository contains small, focused packages that keep application and domai
 | [`sebkuw.Cqrs`](src/sebkuw.Cqrs/README.md) | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
 | [`sebkuw.EntityFrameworkCore.Auditing`](src/sebkuw.EntityFrameworkCore.Auditing/README.md) | EF Core interceptors for automatic audit metadata and entity lifecycle enforcement. |
 | [`sebkuw.ExceptionProcessor`](src/sebkuw.ExceptionProcessor/README.md) | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
+| [`sebkuw.ExportProcessor`](src/sebkuw.ExportProcessor/README.md) | Streaming CSV exports from filtered and sorted EF Core queries with explicit selectable columns. |
 | [`sebkuw.ImportProcessor`](src/sebkuw.ImportProcessor/README.md) | Streaming, domain-neutral CSV imports with typed mapping, validation, preview, reporting and idempotency hooks. |
 | [`sebkuw.QueryableProcessor`](src/sebkuw.QueryableProcessor/README.md) | Dynamic `IQueryable` filtering, sorting, pagination and Angular-compatible response metadata. |
 
@@ -46,6 +48,7 @@ src/
   sebkuw.Cqrs/
   sebkuw.EntityFrameworkCore.Auditing/
   sebkuw.ExceptionProcessor/
+  sebkuw.ExportProcessor/
   sebkuw.ImportProcessor/
   sebkuw.QueryableProcessor/
 tests/
@@ -54,6 +57,7 @@ tests/
   sebkuw.Cqrs.Tests/
   sebkuw.EntityFrameworkCore.Auditing.Tests/
   sebkuw.ExceptionProcessor.Tests/
+  sebkuw.ExportProcessor.Tests/
   sebkuw.ImportProcessor.Tests/
   sebkuw.QueryableProcessor.Tests/
 ```
@@ -512,6 +516,26 @@ public sealed class DuplicateEmailException : BaseException
 - `ExceptionResponse.Timestamp` is set in UTC when the response is created.
 - `GlobalExceptionMiddleware` writes JSON with camel-case property names and includes the correlation ID in both the response body and header.
 
+## sebkuw.ExportProcessor
+
+`sebkuw.ExportProcessor` streams CSV output from EF Core queries after applying `RequestDto` filters and sorting. Exports use an explicit column map; callers may select and order only mapped columns. Pagination can be ignored to export all matching rows or applied to export the current page.
+
+```csharp
+var map = new CsvExportMap<ProductExportRow>()
+    .Map("name", row => row.Name, header: "Product")
+    .Map("price", row => row.Price, header: "Price");
+
+await dbContext.Products.ExportCsvAsync(
+    response.Body,
+    request,
+    product => new ProductExportRow(product.Name, product.Price),
+    map,
+    new CsvExportOptions { Columns = ["name", "price"] },
+    cancellationToken);
+```
+
+See the [package documentation](src/sebkuw.ExportProcessor/README.md) for query scope, formatting, security, and endpoint integration details.
+
 ## sebkuw.ImportProcessor
 
 `sebkuw.ImportProcessor` provides a reusable CSV import pipeline with streaming parsing, generic typed mapping, culture-aware conversion, asynchronous row validation, preview mode, detailed batch reports, and extension points for application-owned persistence and idempotency. It has no dependency on a domain model, ORM, or database.
@@ -548,6 +572,7 @@ dotnet add package sebkuw.QueryableProcessor
 - `PaginationOptions`
 - `PaginationResponse<T>`
 - `ApplyFilters`
+- `ApplyRequest`
 - `SortBy`
 - `Paginate`
 - `SolveRequest`

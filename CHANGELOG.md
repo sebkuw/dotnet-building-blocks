@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- The new `sebkuw.ExportProcessor` package for streaming CSV exports from `IQueryable<T>` with `RequestDto` filtering, sorting, optional pagination, explicit selectable columns, row limits, cancellation, and spreadsheet formula protection.
 - The new `sebkuw.ImportProcessor` package for streaming, domain-neutral CSV imports with mapping, conversion, validation, preview, batch reporting, application-owned persistence, and idempotency extension points.
 - Reusable entity lifecycle contracts for hard-delete protection, deactivation, and append-only records.
 - EF Core lifecycle enforcement integrated with the existing auditing registration pipeline.

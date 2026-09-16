@@ -90,6 +90,14 @@ The .NET response uses explicit PascalCase JSON names, even when the application
 
 `@netdevs/shared-ui-list` currently declares all fields except `HasPreviousPage`; the additional field is backward-compatible for JSON consumers. Changing a field name, type, page indexing, or total-page calculation requires a coordinated breaking-change review.
 
+## CSV export integration
+
+`sebkuw.ExportProcessor` reuses the same `RequestDto` filtering and sorting contract for backend CSV exports. By default it ignores `PaginationOptions` and exports all matching rows; `CsvExportScope.CurrentPage` explicitly applies the requested page. This is server-side behavior rather than a change to the serialized `RequestDto` shape.
+
+Angular `ExportRequest.visibleColumns` should be mapped to `CsvExportOptions.Columns`. The names are matched case-insensitively against an application-defined `CsvExportMap<T>` allowlist. Unknown or duplicate names are rejected, and no entity property is resolved directly from client input.
+
+Angular `ExportRequest.filters` and `sort` can be converted to the established request shape in the same way as `toPaginationRequestDto`: filter `id` becomes `PropertyPath`, and a non-empty sort becomes `"column direction"`. The backend remains responsible for authorization and for choosing the allowed map supplied to the exporter.
+
 ## Error response and correlation
 
 `sebkuw.ExceptionProcessor` returns camelCase error JSON:
