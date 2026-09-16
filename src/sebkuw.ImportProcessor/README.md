@@ -84,6 +84,17 @@ The parser supports configurable delimiters, escaped quotes, CRLF/LF records, an
 - The package does not define domain entities, transactions, database access, authorization, or upsert rules.
 - Writer and idempotency-store atomicity is owned by the application adapter.
 
+## Source layout
+
+- `Abstractions` contains application extension-point interfaces.
+- `Configuration` contains import execution options.
+- `Internal` contains the streaming CSV reader.
+- `Mapping` contains declarative column mapping and conversion.
+- `Models` contains row, batch, and issue result types.
+- `Processing` contains the import pipeline.
+
+The folders organize the source without changing the public `sebkuw.ImportProcessor` namespace.
+
 ## Development
 
 - [Library instructions](AGENTS.md)

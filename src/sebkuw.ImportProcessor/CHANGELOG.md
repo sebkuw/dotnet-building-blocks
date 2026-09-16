@@ -13,6 +13,7 @@ All notable changes to `sebkuw.ImportProcessor` are documented here. The format 
 ### Changed
 
 - Advanced the package version to 2.1.0 for the additive large-file import API.
+- Organized source files by abstractions, configuration, internals, mapping, models, and processing without changing public namespaces or behavior.
 
 ## [2.0.0] - 2026-09-10
 

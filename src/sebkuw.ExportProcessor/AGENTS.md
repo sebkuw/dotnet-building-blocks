@@ -5,4 +5,5 @@
 - Eksportuj wyłącznie kolumny zdefiniowane przez aplikację w `CsvExportMap<T>`; nazwy otrzymane od klienta traktuj jako wybór z tej listy.
 - Publiczne operacje I/O muszą przyjmować `CancellationToken` i pozostawiać strumień wyjściowy otwarty.
 - Domyślnie zabezpieczaj komórki przed interpretacją formuł arkusza kalkulacyjnego.
+- Utrzymuj kod w katalogach `Configuration`, `Extensions`, `Mapping` i `Models`, zachowując publiczne typy w namespace `sebkuw.ExportProcessor`.
 - Testuj filtrowanie, sortowanie, oba zakresy paginacji, wybór kolumn, cytowanie CSV, kulturę, limity, anulowanie i niepoprawne argumenty.

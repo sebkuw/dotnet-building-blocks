@@ -69,6 +69,15 @@ Applications remain responsible for authorization, filename selection, response 
 - Selected columns control CSV output; the projection expression itself is static, so it should contain only fields intended for this export use case.
 - The package does not buffer or return a downloadable file object. ASP.NET Core applications should set their own `Content-Type`, filename, and authorization policy before writing to the response stream.
 
+## Source layout
+
+- `Configuration` contains export options and scope selection.
+- `Extensions` contains the `IQueryable<T>` CSV export entry point.
+- `Mapping` contains the explicit export column allowlist.
+- `Models` contains export result metadata.
+
+The folders organize the source without changing the public `sebkuw.ExportProcessor` namespace.
+
 ## Development
 
 - [Library instructions](AGENTS.md)

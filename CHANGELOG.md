@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Organized the ImportProcessor and ExportProcessor source trees by responsibility while preserving their public namespaces and APIs.
 - Added bounded concurrent mapping, ordered batch writes, and bounded row-report retention for large CSV imports; advanced `sebkuw.ImportProcessor` and `sebkuw.QueryableProcessor` to version 2.1.0 for their additive APIs.
 - Enforce the repository-wide C# style of omitting braces from single-statement `if` bodies.
 - Advanced the pinned .NET 10 SDK feature band to 10.0.400 so patched .NET tooling can be selected.
