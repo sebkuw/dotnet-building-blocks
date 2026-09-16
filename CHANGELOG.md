@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Enforce the repository-wide C# style of omitting braces from single-statement `if` bodies.
 - Advanced the pinned .NET 10 SDK feature band to 10.0.400 so patched .NET tooling can be selected.
 - Updated the existing build-only Source Link dependency to the patched .NET 10 line after the previous transitive Git build task was flagged by NuGet audit.
 - Renamed every library, NuGet package, assembly, namespace, project, test project, solution reference, and repository development skill from the previous package prefix to `sebkuw`.

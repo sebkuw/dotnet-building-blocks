@@ -189,9 +189,7 @@ public sealed class ImportProcessorTests
             .Map("quantity", row => row.Quantity)
             .Map("note", row => row.Note, required: false);
         if (useKey)
-        {
             map.UseIdempotencyKey(row => row.Name);
-        }
 
         return new ImportProcessor<Row>(map, writer, store);
     }

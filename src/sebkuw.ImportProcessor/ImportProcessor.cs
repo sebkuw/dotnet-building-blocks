@@ -70,9 +70,7 @@ public sealed class ImportProcessor<T>
         }
 
         if (recordNumber == 0)
-        {
             batchIssues.Add(new ImportIssue("EmptyDocument", "The CSV document is empty."));
-        }
 
         var batch = new ImportBatch<T>(Guid.NewGuid(), options.Preview, rows, batchIssues);
         if (!options.Preview && writer is not null && batchIssues.All(issue => issue.Severity != ImportIssueSeverity.Error))
@@ -80,12 +78,10 @@ public sealed class ImportProcessor<T>
             var validRows = rows.Where(row => row.IsValid).ToArray();
             await writer.WriteAsync(validRows.Select(row => row.Value!).ToArray(), cancellationToken).ConfigureAwait(false);
             if (idempotencyStore is not null)
-            {
                 foreach (var key in validRows.Select(row => row.IdempotencyKey).OfType<string>())
                 {
                     await idempotencyStore.MarkProcessedAsync(key, cancellationToken).ConfigureAwait(false);
                 }
-            }
         }
 
         return batch;
@@ -126,9 +122,7 @@ public sealed class ImportProcessor<T>
             if (!source.TryGetValue(binding.Column, out var rawValue))
             {
                 if (binding.Required)
-                {
                     issues.Add(new ImportIssue("MissingColumn", $"Required column '{binding.Column}' is missing.", Column: binding.Column));
-                }
 
                 continue;
             }
@@ -147,19 +141,13 @@ public sealed class ImportProcessor<T>
         {
             var validationIssues = await validator.ValidateAsync(value, rowNumber, cancellationToken).ConfigureAwait(false);
             if (validationIssues is not null)
-            {
                 issues.AddRange(validationIssues);
-            }
         }
 
         var key = map.IdempotencyKeySelector?.Invoke(value);
         if (!string.IsNullOrWhiteSpace(key))
-        {
             if (!seenKeys.Add(key) || (idempotencyStore is not null && await idempotencyStore.ContainsAsync(key, cancellationToken).ConfigureAwait(false)))
-            {
                 issues.Add(new ImportIssue("Duplicate", $"Idempotency key '{key}' has already been processed."));
-            }
-        }
 
         return new ImportRow<T>(rowNumber, value, source, issues, key);
     }

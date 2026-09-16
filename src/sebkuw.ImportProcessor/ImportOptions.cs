@@ -26,8 +26,6 @@ public sealed class ImportOptions
         ArgumentNullException.ThrowIfNull(Culture);
         ArgumentNullException.ThrowIfNull(Encoding);
         if (Delimiter is '\r' or '\n' or '"' or '\0')
-        {
             throw new ArgumentOutOfRangeException(nameof(Delimiter), "Delimiter cannot be a quote, line break, or null character.");
-        }
     }
 }

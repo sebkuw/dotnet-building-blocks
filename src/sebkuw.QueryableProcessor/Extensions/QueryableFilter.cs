@@ -172,11 +172,9 @@ public static class QueryableFilter
                 return null;
 
             if (effectiveTargetType.IsEnum)
-            {
                 return jsonElement.ValueKind == JsonValueKind.String
                     ? Enum.Parse(effectiveTargetType, jsonElement.GetString()!, ignoreCase: true)
                     : Enum.ToObject(effectiveTargetType, jsonElement.GetInt32());
-            }
 
             if (effectiveTargetType == typeof(int))
                 return jsonElement.GetInt32();

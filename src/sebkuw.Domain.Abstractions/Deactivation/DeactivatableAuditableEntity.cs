@@ -27,14 +27,10 @@ public abstract class DeactivatableAuditableEntity<TId> : AuditableEntity<TId>, 
         ArgumentOutOfRangeException.ThrowIfEqual(userId, Guid.Empty);
 
         if (deactivatedAt.Offset != TimeSpan.Zero)
-        {
             throw new ArgumentException("The deactivation date and time must be expressed in UTC.", nameof(deactivatedAt));
-        }
 
         if (!IsActive)
-        {
             return;
-        }
 
         IsActive = false;
         DeactivatedBy = userId;
@@ -47,9 +43,7 @@ public abstract class DeactivatableAuditableEntity<TId> : AuditableEntity<TId>, 
     public void Reactivate()
     {
         if (IsActive)
-        {
             return;
-        }
 
         IsActive = true;
         DeactivatedBy = null;
