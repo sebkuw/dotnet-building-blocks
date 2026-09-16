@@ -32,7 +32,7 @@ This repository contains small, focused packages that keep application and domai
 | [`sebkuw.EntityFrameworkCore.Auditing`](src/sebkuw.EntityFrameworkCore.Auditing/README.md) | EF Core interceptors for automatic audit metadata and entity lifecycle enforcement. |
 | [`sebkuw.ExceptionProcessor`](src/sebkuw.ExceptionProcessor/README.md) | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
 | [`sebkuw.ExportProcessor`](src/sebkuw.ExportProcessor/README.md) | Streaming CSV exports from filtered and sorted EF Core queries with explicit selectable columns. |
-| [`sebkuw.ImportProcessor`](src/sebkuw.ImportProcessor/README.md) | Streaming, domain-neutral CSV imports with typed mapping, validation, preview, reporting and idempotency hooks. |
+| [`sebkuw.ImportProcessor`](src/sebkuw.ImportProcessor/README.md) | Streaming, bounded CSV imports with concurrent mapping, ordered batch writes, typed validation, preview, reporting and idempotency hooks. |
 | [`sebkuw.QueryableProcessor`](src/sebkuw.QueryableProcessor/README.md) | Dynamic `IQueryable` filtering, sorting, pagination and Angular-compatible response metadata. |
 
 ## Migration to the `sebkuw` package prefix
@@ -538,7 +538,7 @@ See the [package documentation](src/sebkuw.ExportProcessor/README.md) for query 
 
 ## sebkuw.ImportProcessor
 
-`sebkuw.ImportProcessor` provides a reusable CSV import pipeline with streaming parsing, generic typed mapping, culture-aware conversion, asynchronous row validation, preview mode, detailed batch reports, and extension points for application-owned persistence and idempotency. It has no dependency on a domain model, ORM, or database.
+`sebkuw.ImportProcessor` provides a reusable CSV import pipeline with streaming parsing, bounded concurrent mapping and validation, ordered incremental writes, configurable result retention, preview mode, detailed batch reports, and extension points for application-owned persistence and idempotency. It has no dependency on a domain model, ORM, or database.
 
 ```csharp
 var map = new ImportMap<ProductRow>(() => new ProductRow())
@@ -547,7 +547,16 @@ var map = new ImportMap<ProductRow>(() => new ProductRow())
     .UseIdempotencyKey(row => row.Sku);
 
 var batch = await new ImportProcessor<ProductRow>(map, writer, idempotencyStore)
-    .ProcessAsync(csvStream, new ImportOptions { Preview = true }, cancellationToken);
+    .ProcessAsync(
+        csvStream,
+        new ImportOptions
+        {
+            BatchSize = 1_000,
+            BufferCapacity = 2_000,
+            MaxDegreeOfParallelism = 4,
+            MaxRetainedRows = 100,
+        },
+        cancellationToken);
 ```
 
 See the [package documentation](src/sebkuw.ImportProcessor/README.md) for mapping, validation, execution, and extension-point details.

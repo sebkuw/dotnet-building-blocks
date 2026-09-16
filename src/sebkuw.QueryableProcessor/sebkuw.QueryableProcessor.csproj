@@ -6,7 +6,7 @@
 		<AssemblyName>sebkuw.QueryableProcessor</AssemblyName>
 		<RootNamespace>sebkuw.QueryableProcessor</RootNamespace>
 		<PackageId>sebkuw.QueryableProcessor</PackageId>
-		<Version>2.0.0</Version>
+		<Version>2.1.0</Version>
 		<Authors>Sebastian Wnorowski</Authors>
 		<Description>A powerful library for dynamic filtering, sorting, and pagination of IQueryable collections.</Description>
 		<PackageTags>LINQ IQueryable Sorting Filtering Pagination Dynamic</PackageTags>

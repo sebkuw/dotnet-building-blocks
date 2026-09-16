@@ -1,3 +1,5 @@
+using System.Threading.Channels;
+
 namespace sebkuw.ImportProcessor;
 
 /// <summary>Streams CSV input through mapping, validation, preview, writing, and idempotency stages.</summary>
@@ -43,48 +45,156 @@ public sealed class ImportProcessor<T>
         cancellationToken.ThrowIfCancellationRequested();
 
         var rows = new List<ImportRow<T>>();
+        var writeBuffer = new List<ImportRow<T>>(Math.Min(options.BatchSize, 1024));
         var batchIssues = new List<ImportIssue>();
         var seenKeys = new HashSet<string>(StringComparer.Ordinal);
+        var pendingRows = new Queue<Task<ImportRow<T>>>(options.BufferCapacity);
+        var workChannel = Channel.CreateBounded<RowWorkItem>(new BoundedChannelOptions(options.BufferCapacity)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = options.MaxDegreeOfParallelism == 1,
+            SingleWriter = true,
+        });
+        var workers = Enumerable.Range(0, options.MaxDegreeOfParallelism)
+            .Select(_ => ProcessRowsAsync(workChannel.Reader, options, cancellationToken))
+            .ToArray();
         string[]? headers = null;
         var recordNumber = 0L;
+        var validRowCount = 0;
+        var invalidRowCount = 0;
+
+        async ValueTask CompleteNextRowAsync()
+        {
+            var mappedRow = await pendingRows.Dequeue().ConfigureAwait(false);
+            var row = await ApplyIdempotencyAsync(mappedRow, seenKeys, cancellationToken).ConfigureAwait(false);
+            if (row.IsValid)
+                validRowCount++;
+            else
+                invalidRowCount++;
+
+            if (rows.Count < options.MaxRetainedRows)
+                rows.Add(row);
+
+            if (!row.IsValid || options.Preview || writer is null || HasErrors(batchIssues))
+                return;
+
+            writeBuffer.Add(row);
+            if (writeBuffer.Count >= options.BatchSize)
+                await FlushAsync(writeBuffer, cancellationToken).ConfigureAwait(false);
+        }
 
         try
         {
-            await foreach (var record in CsvRecordReader.ReadAsync(reader, options.Delimiter, cancellationToken).ConfigureAwait(false))
+            try
             {
-                recordNumber++;
-                if (recordNumber == 1 && options.HasHeader)
+                await foreach (var record in CsvRecordReader.ReadAsync(reader, options.Delimiter, cancellationToken).ConfigureAwait(false))
                 {
-                    headers = record.Select(value => value.Trim()).ToArray();
-                    ValidateHeaders(headers, batchIssues);
-                    continue;
-                }
+                    recordNumber++;
+                    if (recordNumber == 1 && options.HasHeader)
+                    {
+                        headers = record.Select(value => value.Trim()).ToArray();
+                        ValidateHeaders(headers, batchIssues);
+                        continue;
+                    }
 
-                headers ??= Enumerable.Range(1, record.Count).Select(index => index.ToString(options.Culture)).ToArray();
-                rows.Add(await MapRowAsync(record, headers, recordNumber, options, seenKeys, cancellationToken).ConfigureAwait(false));
+                    headers ??= Enumerable.Range(1, record.Count).Select(index => index.ToString(options.Culture)).ToArray();
+                    var completion = new TaskCompletionSource<ImportRow<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
+                    await workChannel.Writer.WriteAsync(
+                        new RowWorkItem(record, headers, recordNumber, completion),
+                        cancellationToken).ConfigureAwait(false);
+                    pendingRows.Enqueue(completion.Task);
+                    if (pendingRows.Count >= options.BufferCapacity)
+                        await CompleteNextRowAsync().ConfigureAwait(false);
+                }
             }
+            catch (FormatException exception)
+            {
+                batchIssues.Add(new ImportIssue("MalformedCsv", exception.Message));
+            }
+
+            while (pendingRows.Count > 0)
+                await CompleteNextRowAsync().ConfigureAwait(false);
         }
-        catch (FormatException exception)
+        finally
         {
-            batchIssues.Add(new ImportIssue("MalformedCsv", exception.Message));
+            workChannel.Writer.TryComplete();
+            await Task.WhenAll(workers).ConfigureAwait(false);
         }
 
         if (recordNumber == 0)
             batchIssues.Add(new ImportIssue("EmptyDocument", "The CSV document is empty."));
 
-        var batch = new ImportBatch<T>(Guid.NewGuid(), options.Preview, rows, batchIssues);
-        if (!options.Preview && writer is not null && batchIssues.All(issue => issue.Severity != ImportIssueSeverity.Error))
+        if (!options.Preview && writer is not null && !HasErrors(batchIssues))
+            await FlushAsync(writeBuffer, cancellationToken).ConfigureAwait(false);
+
+        return new ImportBatch<T>(Guid.NewGuid(), options.Preview, rows, batchIssues)
         {
-            var validRows = rows.Where(row => row.IsValid).ToArray();
-            await writer.WriteAsync(validRows.Select(row => row.Value!).ToArray(), cancellationToken).ConfigureAwait(false);
-            if (idempotencyStore is not null)
-                foreach (var key in validRows.Select(row => row.IdempotencyKey).OfType<string>())
-                {
-                    await idempotencyStore.MarkProcessedAsync(key, cancellationToken).ConfigureAwait(false);
-                }
+            ValidRowCount = validRowCount,
+            InvalidRowCount = invalidRowCount,
+        };
+    }
+
+    private static bool HasErrors(IEnumerable<ImportIssue> issues) =>
+        issues.Any(issue => issue.Severity == ImportIssueSeverity.Error);
+
+    private async Task ProcessRowsAsync(
+        ChannelReader<RowWorkItem> reader,
+        ImportOptions options,
+        CancellationToken cancellationToken)
+    {
+        await foreach (var item in reader.ReadAllAsync(CancellationToken.None).ConfigureAwait(false))
+        {
+            try
+            {
+                var row = await MapRowAsync(
+                    item.Record,
+                    item.Headers,
+                    item.RowNumber,
+                    options,
+                    cancellationToken).ConfigureAwait(false);
+                item.Completion.TrySetResult(row);
+            }
+            catch (OperationCanceledException exception)
+            {
+                item.Completion.TrySetCanceled(exception.CancellationToken);
+            }
+            catch (Exception exception)
+            {
+                item.Completion.TrySetException(exception);
+            }
+        }
+    }
+
+    private async ValueTask<ImportRow<T>> ApplyIdempotencyAsync(
+        ImportRow<T> row,
+        HashSet<string> seenKeys,
+        CancellationToken cancellationToken)
+    {
+        var key = map.IdempotencyKeySelector?.Invoke(row.Value!);
+        if (string.IsNullOrWhiteSpace(key))
+            return row with { IdempotencyKey = key };
+
+        if (!seenKeys.Add(key) || (idempotencyStore is not null && await idempotencyStore.ContainsAsync(key, cancellationToken).ConfigureAwait(false)))
+        {
+            var issues = row.Issues.ToList();
+            issues.Add(new ImportIssue("Duplicate", $"Idempotency key '{key}' has already been processed."));
+            return row with { Issues = issues, IdempotencyKey = key };
         }
 
-        return batch;
+        return row with { IdempotencyKey = key };
+    }
+
+    private async ValueTask FlushAsync(List<ImportRow<T>> rows, CancellationToken cancellationToken)
+    {
+        if (rows.Count == 0 || writer is null)
+            return;
+
+        await writer.WriteAsync(rows.Select(row => row.Value!).ToArray(), cancellationToken).ConfigureAwait(false);
+        if (idempotencyStore is not null)
+            foreach (var key in rows.Select(row => row.IdempotencyKey).OfType<string>())
+                await idempotencyStore.MarkProcessedAsync(key, cancellationToken).ConfigureAwait(false);
+
+        rows.Clear();
     }
 
     private void ValidateHeaders(string[] headers, List<ImportIssue> issues)
@@ -105,7 +215,6 @@ public sealed class ImportProcessor<T>
         string[] headers,
         long rowNumber,
         ImportOptions options,
-        HashSet<string> seenKeys,
         CancellationToken cancellationToken)
     {
         var source = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -144,11 +253,12 @@ public sealed class ImportProcessor<T>
                 issues.AddRange(validationIssues);
         }
 
-        var key = map.IdempotencyKeySelector?.Invoke(value);
-        if (!string.IsNullOrWhiteSpace(key))
-            if (!seenKeys.Add(key) || (idempotencyStore is not null && await idempotencyStore.ContainsAsync(key, cancellationToken).ConfigureAwait(false)))
-                issues.Add(new ImportIssue("Duplicate", $"Idempotency key '{key}' has already been processed."));
-
-        return new ImportRow<T>(rowNumber, value, source, issues, key);
+        return new ImportRow<T>(rowNumber, value, source, issues, null);
     }
+
+    private sealed record RowWorkItem(
+        IReadOnlyList<string> Record,
+        string[] Headers,
+        long RowNumber,
+        TaskCompletionSource<ImportRow<T>> Completion);
 }

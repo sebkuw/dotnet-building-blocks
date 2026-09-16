@@ -20,10 +20,16 @@ public sealed record ImportBatch<T>(
     IReadOnlyList<ImportIssue> Issues)
 {
     /// <summary>Gets the number of rows without error-level issues.</summary>
-    public int ValidRowCount => Rows.Count(row => row.IsValid);
+    public int ValidRowCount { get; internal init; } = Rows.Count(row => row.IsValid);
 
     /// <summary>Gets the number of rows containing an error-level issue.</summary>
-    public int InvalidRowCount => Rows.Count - ValidRowCount;
+    public int InvalidRowCount { get; internal init; } = Rows.Count(row => !row.IsValid);
+
+    /// <summary>Gets the total number of data rows processed, including rows omitted from <see cref="Rows"/>.</summary>
+    public int ProcessedRowCount => ValidRowCount + InvalidRowCount;
+
+    /// <summary>Gets whether every processed row is available in <see cref="Rows"/>.</summary>
+    public bool HasCompleteRowReport => Rows.Count == ProcessedRowCount;
 
     /// <summary>Gets whether the batch or any row contains an error.</summary>
     public bool HasErrors => Issues.Any(issue => issue.Severity == ImportIssueSeverity.Error) || InvalidRowCount > 0;

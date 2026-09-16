@@ -5,7 +5,7 @@
     <AssemblyName>sebkuw.ImportProcessor</AssemblyName>
     <RootNamespace>sebkuw.ImportProcessor</RootNamespace>
     <PackageId>sebkuw.ImportProcessor</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Authors>Sebastian Wnorowski</Authors>
     <Description>Streaming, domain-neutral CSV import pipeline with mapping, validation, preview, error reporting, batches, and idempotency extension points.</Description>
     <PackageTags>CSV Import Streaming Mapping Validation Idempotency</PackageTags>
