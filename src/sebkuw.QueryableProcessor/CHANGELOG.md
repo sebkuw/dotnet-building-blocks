@@ -8,9 +8,11 @@ All notable changes to `sebkuw.QueryableProcessor` are documented here. The form
 
 - Contract tests and documentation for `@netdevs/shared-ui-list` requests and responses.
 - Package-specific development instructions and quality workflow.
+- `ApplyRequest` query composition for reuse by export and other pipelines, with optional pagination.
 
 ### Changed
 
+- Advanced the package version to 2.1.0 for the additive `ApplyRequest` API.
 - Renamed the package, assembly, project, and public namespaces to `sebkuw.QueryableProcessor`; version 2.0.0 requires consumers to update package references and imports.
 - Accept Angular sort values such as `createdAt desc` while preserving `desc_CreatedAt` compatibility.
 - Resolve sort property paths case-insensitively so camelCase frontend fields match .NET properties.

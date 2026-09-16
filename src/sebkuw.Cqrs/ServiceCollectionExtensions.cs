@@ -31,10 +31,8 @@ public static class ServiceCollectionExtensions
             .ToArray();
 
         if (assemblies.Length == 0)
-        {
             throw new InvalidOperationException(
                 "No assemblies were configured for CQRS registration.");
-        }
 
         services.Scan(scan => scan
             .FromAssemblies(assemblies)

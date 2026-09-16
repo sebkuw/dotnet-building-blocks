@@ -47,6 +47,8 @@ The response exposes `Data`, `TotalItems`, `TotalPages`, `PageNumber`, `PageSize
 
 Filtering, sorting, count, pagination, and projection remain in the query pipeline so EF Core providers can translate them. Invalid sort paths leave the source ordering unchanged.
 
+Use `ApplyRequest(request)` when another pipeline, such as CSV export, needs the composed `IQueryable<T>` without immediately producing a pagination response. Pass `includePagination: false` to retain filtering and sorting while exporting all matching records.
+
 See the complete [Angular compatibility contract](../../docs/angular-shared-components-contract.md).
 
 ## Development

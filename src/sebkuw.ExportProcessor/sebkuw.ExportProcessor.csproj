@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>sebkuw.ExportProcessor</AssemblyName>
+    <RootNamespace>sebkuw.ExportProcessor</RootNamespace>
+    <PackageId>sebkuw.ExportProcessor</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Sebastian Wnorowski</Authors>
+    <Description>Streaming CSV exports for filtered, sorted, and paginated IQueryable data with an explicit column allowlist.</Description>
+    <PackageTags>CSV Export Streaming IQueryable Filtering Sorting Pagination</PackageTags>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\sebkuw.QueryableProcessor\sebkuw.QueryableProcessor.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="README.md" Pack="true" PackagePath="\" />
+    <None Update="CHANGELOG.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

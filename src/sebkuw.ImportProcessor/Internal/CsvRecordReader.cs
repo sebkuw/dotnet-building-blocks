@@ -22,9 +22,7 @@ internal static class CsvRecordReader
         {
             var count = await reader.ReadAsync(buffer.AsMemory(), cancellationToken).ConfigureAwait(false);
             if (count == 0)
-            {
                 break;
-            }
 
             for (var index = 0; index < count; index++)
             {
@@ -36,13 +34,10 @@ internal static class CsvRecordReader
                 {
                     skipLineFeed = false;
                     if (character == '\n')
-                    {
                         continue;
-                    }
                 }
 
                 if (inQuotes)
-                {
                     if (quotePending)
                     {
                         if (character == '"')
@@ -65,12 +60,9 @@ internal static class CsvRecordReader
                         field.Append(character);
                         continue;
                     }
-                }
 
                 if (character == '"' && field.Length == 0)
-                {
                     inQuotes = true;
-                }
                 else if (character == delimiter)
                 {
                     fields.Add(field.ToString());
@@ -93,9 +85,7 @@ internal static class CsvRecordReader
         }
 
         if (inQuotes && !quotePending)
-        {
             throw new FormatException("The CSV document ends inside a quoted field.");
-        }
 
         if (anyCharacters || field.Length > 0 || fields.Count > 0)
         {

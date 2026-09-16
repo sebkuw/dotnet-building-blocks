@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- The new `sebkuw.ExportProcessor` package for streaming CSV exports from `IQueryable<T>` with `RequestDto` filtering, sorting, optional pagination, explicit selectable columns, row limits, cancellation, and spreadsheet formula protection.
 - The new `sebkuw.ImportProcessor` package for streaming, domain-neutral CSV imports with mapping, conversion, validation, preview, batch reporting, application-owned persistence, and idempotency extension points.
 - Reusable entity lifecycle contracts for hard-delete protection, deactivation, and append-only records.
 - EF Core lifecycle enforcement integrated with the existing auditing registration pipeline.
@@ -20,6 +21,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Organized the ImportProcessor and ExportProcessor source trees by responsibility while preserving their public namespaces and APIs.
+- Added bounded concurrent mapping, ordered batch writes, and bounded row-report retention for large CSV imports; advanced `sebkuw.ImportProcessor` and `sebkuw.QueryableProcessor` to version 2.1.0 for their additive APIs.
+- Enforce the repository-wide C# style of omitting braces from single-statement `if` bodies.
 - Advanced the pinned .NET 10 SDK feature band to 10.0.400 so patched .NET tooling can be selected.
 - Updated the existing build-only Source Link dependency to the patched .NET 10 line after the previous transitive Git build task was flagged by NuGet audit.
 - Renamed every library, NuGet package, assembly, namespace, project, test project, solution reference, and repository development skill from the previous package prefix to `sebkuw`.

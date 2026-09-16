@@ -311,6 +311,30 @@ public sealed class QueryableProcessorTests
     }
 
     [Fact]
+    public void ApplyRequest_applies_filters_sorting_and_optional_pagination()
+    {
+        var request = new RequestDto
+        {
+            SortParam = "price desc",
+            Filters =
+            [
+                new FilterCondition
+                {
+                    PropertyPath = nameof(TestProduct.Status),
+                    Operation = FilterOperation.Equal,
+                    Value = ProductStatus.Published
+                }
+            ],
+            PaginationOptions = new PaginationOptions(2, 1)
+        };
+
+        IQueryable<TestProduct> products = CreateProducts().AsQueryable();
+
+        Assert.Equal([2], products.ApplyRequest(request).Select(product => product.Id));
+        Assert.Equal([3, 2], products.ApplyRequest(request, includePagination: false).Select(product => product.Id));
+    }
+
+    [Fact]
     public void Paginate_throws_when_page_size_exceeds_limit()
     {
         IQueryable<TestProduct> products = CreateProducts().AsQueryable();

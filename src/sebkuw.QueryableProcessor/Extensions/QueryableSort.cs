@@ -44,18 +44,14 @@ public static class QueryableSort
         method = SettingsConstants.OrderByMethod;
 
         if (value.StartsWith(SettingsConstants.AscendingPrefix, StringComparison.OrdinalIgnoreCase))
-        {
             propertyPath = value[SettingsConstants.AscendingPrefix.Length..];
-        }
         else if (value.StartsWith(SettingsConstants.DescendingPrefix, StringComparison.OrdinalIgnoreCase))
         {
             propertyPath = value[SettingsConstants.DescendingPrefix.Length..];
             method = SettingsConstants.OrderByDescendingMethod;
         }
         else if (value.EndsWith(" asc", StringComparison.OrdinalIgnoreCase))
-        {
             propertyPath = value[..^4].TrimEnd();
-        }
         else if (value.EndsWith(" desc", StringComparison.OrdinalIgnoreCase))
         {
             propertyPath = value[..^5].TrimEnd();

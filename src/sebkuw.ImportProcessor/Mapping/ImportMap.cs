@@ -51,9 +51,7 @@ public sealed class ImportMap<T>
             memberExpression.Expression != property.Parameters[0] ||
             propertyInfo.SetMethod is null ||
             propertyInfo.SetMethod.IsStatic)
-        {
             throw new ArgumentException("Expression must select a writable instance property.", nameof(property));
-        }
 
         var target = Expression.Parameter(typeof(T), "target");
         var value = Expression.Parameter(typeof(TValue), "value");
@@ -82,9 +80,7 @@ public sealed class ImportMap<T>
     private void EnsureUnique(string column)
     {
         if (bindings.Any(binding => string.Equals(binding.Column, column, StringComparison.OrdinalIgnoreCase)))
-        {
             throw new ArgumentException($"Column '{column}' is already mapped.", nameof(column));
-        }
     }
 
     internal interface IColumnBinding<in TTarget>
@@ -111,25 +107,17 @@ public sealed class ImportMap<T>
         {
             var targetType = Nullable.GetUnderlyingType(typeof(TValue)) ?? typeof(TValue);
             if (string.IsNullOrEmpty(value) && Nullable.GetUnderlyingType(typeof(TValue)) is not null)
-            {
                 return default!;
-            }
 
             if (targetType == typeof(string))
-            {
                 return (TValue)(object)value;
-            }
 
             if (targetType.IsEnum)
-            {
                 return (TValue)Enum.Parse(targetType, value, ignoreCase: true);
-            }
 
             var converter = TypeDescriptor.GetConverter(targetType);
             if (!converter.CanConvertFrom(typeof(string)))
-            {
                 throw new NotSupportedException($"No string converter is available for '{targetType.Name}'.");
-            }
 
             return (TValue)converter.ConvertFrom(null, culture, value)!;
         }

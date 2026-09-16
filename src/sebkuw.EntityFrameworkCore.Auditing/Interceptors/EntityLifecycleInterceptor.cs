@@ -37,21 +37,15 @@ public sealed class EntityLifecycleInterceptor : SaveChangesInterceptor
     private static void ValidateChanges(DbContext? dbContext)
     {
         if (dbContext is null)
-        {
             return;
-        }
 
         foreach (var entry in dbContext.ChangeTracker.Entries())
         {
             if (entry.State == EntityState.Deleted && entry.Entity is IHardDeleteProtected)
-            {
                 throw new HardDeleteNotAllowedException(entry.Metadata.ClrType.Name);
-            }
 
             if (entry.State == EntityState.Modified && entry.Entity is IAppendOnlyEntity)
-            {
                 throw new AppendOnlyEntityModificationException(entry.Metadata.ClrType.Name);
-            }
         }
     }
 }

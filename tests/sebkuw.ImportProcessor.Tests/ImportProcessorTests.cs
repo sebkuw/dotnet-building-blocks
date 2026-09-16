@@ -116,6 +116,109 @@ public sealed class ImportProcessorTests
     }
 
     [Fact]
+    public async Task ProcessAsync_WritesBoundedBatchesAndLimitsRetainedRows()
+    {
+        var writer = new RecordingWriter();
+        var processor = CreateProcessor(writer);
+        var options = new ImportOptions
+        {
+            BatchSize = 2,
+            BufferCapacity = 2,
+            MaxRetainedRows = 1,
+        };
+
+        var batch = await processor.ProcessAsync(
+            new StringReader("name,quantity\na,1\nb,2\nc,3\nd,4\ne,5"),
+            options);
+
+        Assert.Equal([2, 2, 1], writer.BatchSizes);
+        Assert.Equal(["a", "b", "c", "d", "e"], writer.Values.Select(row => row.Name));
+        Assert.Equal(5, batch.ProcessedRowCount);
+        Assert.Equal(5, batch.ValidRowCount);
+        Assert.Equal(0, batch.InvalidRowCount);
+        Assert.Single(batch.Rows);
+        Assert.False(batch.HasCompleteRowReport);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_HandlesLargeInputWithoutRetainingRowReports()
+    {
+        const int rowCount = 10_000;
+        var csv = new StringBuilder("name,quantity\n");
+        for (var index = 0; index < rowCount; index++)
+            csv.Append("item-").Append(index).Append(',').Append(index).Append('\n');
+
+        var writer = new CountingWriter();
+        var processor = CreateProcessor(writer);
+        var options = new ImportOptions
+        {
+            BatchSize = 128,
+            BufferCapacity = 64,
+            MaxDegreeOfParallelism = 4,
+            MaxRetainedRows = 0,
+        };
+
+        var batch = await processor.ProcessAsync(new StringReader(csv.ToString()), options);
+
+        Assert.Equal(rowCount, writer.Count);
+        Assert.Equal(79, writer.CallCount);
+        Assert.Equal(128, writer.MaximumBatchSize);
+        Assert.Equal(rowCount, batch.ProcessedRowCount);
+        Assert.Empty(batch.Rows);
+        Assert.False(batch.HasCompleteRowReport);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_MapsConcurrentlyAndPreservesInputOrder()
+    {
+        var validator = new CoordinatedValidator(participants: 3);
+        var map = new ImportMap<Row>(() => new Row())
+            .Map("name", row => row.Name)
+            .Map("quantity", row => row.Quantity)
+            .ValidateWith(validator);
+        var writer = new RecordingWriter();
+        var processor = new ImportProcessor<Row>(map, writer);
+        var options = new ImportOptions
+        {
+            BatchSize = 2,
+            BufferCapacity = 3,
+            MaxDegreeOfParallelism = 3,
+        };
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+        var batch = await processor.ProcessAsync(
+            new StringReader("name,quantity\nfirst,1\nsecond,2\nthird,3"),
+            options,
+            cancellation.Token);
+
+        Assert.True(validator.MaximumConcurrency > 1);
+        Assert.Equal(["first", "second", "third"], batch.Rows.Select(row => row.Value!.Name));
+        Assert.Equal(["first", "second", "third"], writer.Values.Select(row => row.Name));
+    }
+
+    [Fact]
+    public async Task ProcessAsync_CancelsConcurrentValidation()
+    {
+        var validator = new CancellationValidator();
+        var map = new ImportMap<Row>(() => new Row())
+            .Map("name", row => row.Name)
+            .Map("quantity", row => row.Quantity)
+            .ValidateWith(validator);
+        var processor = new ImportProcessor<Row>(map);
+        var options = new ImportOptions { BufferCapacity = 2, MaxDegreeOfParallelism = 2 };
+        using var cancellation = new CancellationTokenSource();
+
+        var processing = processor.ProcessAsync(
+            new StringReader("name,quantity\na,1\nb,2"),
+            options,
+            cancellation.Token);
+        await validator.Started.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => processing);
+    }
+
+    [Fact]
     public async Task ProcessAsync_HeaderlessInputUsesOneBasedColumnNames()
     {
         var map = new ImportMap<Row>(() => new Row()).Map("1", row => row.Name).Map("2", row => row.Quantity);
@@ -179,6 +282,21 @@ public sealed class ImportProcessorTests
             CreateProcessor().ProcessAsync(new StringReader("x"), new ImportOptions { Delimiter = delimiter }));
     }
 
+    [Fact]
+    public async Task ProcessAsync_RejectsInvalidPipelineLimits()
+    {
+        var processor = CreateProcessor();
+
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            processor.ProcessAsync(new StringReader("x"), new ImportOptions { BatchSize = 0 }));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            processor.ProcessAsync(new StringReader("x"), new ImportOptions { MaxDegreeOfParallelism = 0 }));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            processor.ProcessAsync(new StringReader("x"), new ImportOptions { BufferCapacity = 1, MaxDegreeOfParallelism = 2 }));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() =>
+            processor.ProcessAsync(new StringReader("x"), new ImportOptions { MaxRetainedRows = -1 }));
+    }
+
     private static ImportProcessor<Row> CreateProcessor(
         IImportWriter<Row>? writer = null,
         IImportIdempotencyStore? store = null,
@@ -189,9 +307,7 @@ public sealed class ImportProcessorTests
             .Map("quantity", row => row.Quantity)
             .Map("note", row => row.Note, required: false);
         if (useKey)
-        {
             map.UseIdempotencyKey(row => row.Name);
-        }
 
         return new ImportProcessor<Row>(map, writer, store);
     }
@@ -222,10 +338,81 @@ public sealed class ImportProcessorTests
     {
         public List<Row> Values { get; } = [];
 
+        public List<int> BatchSizes { get; } = [];
+
         public ValueTask WriteAsync(IReadOnlyList<Row> values, CancellationToken cancellationToken)
         {
+            BatchSizes.Add(values.Count);
             Values.AddRange(values);
             return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CountingWriter : IImportWriter<Row>
+    {
+        public int CallCount { get; private set; }
+
+        public int Count { get; private set; }
+
+        public int MaximumBatchSize { get; private set; }
+
+        public ValueTask WriteAsync(IReadOnlyList<Row> values, CancellationToken cancellationToken)
+        {
+            CallCount++;
+            Count += values.Count;
+            MaximumBatchSize = Math.Max(MaximumBatchSize, values.Count);
+            return ValueTask.CompletedTask;
+        }
+    }
+
+    private sealed class CoordinatedValidator(int participants) : IImportRowValidator<Row>
+    {
+        private readonly Lock sync = new();
+        private readonly TaskCompletionSource release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int activeCount;
+        private int startedCount;
+
+        public int MaximumConcurrency { get; private set; }
+
+        public async ValueTask<IReadOnlyList<ImportIssue>> ValidateAsync(
+            Row value,
+            long rowNumber,
+            CancellationToken cancellationToken)
+        {
+            var active = Interlocked.Increment(ref activeCount);
+            lock (sync)
+                MaximumConcurrency = Math.Max(MaximumConcurrency, active);
+
+            if (Interlocked.Increment(ref startedCount) >= participants)
+                release.TrySetResult();
+
+            try
+            {
+                await release.Task.WaitAsync(cancellationToken);
+                if (value.Quantity == 1)
+                    await Task.Delay(25, cancellationToken);
+
+                return [];
+            }
+            finally
+            {
+                Interlocked.Decrement(ref activeCount);
+            }
+        }
+    }
+
+    private sealed class CancellationValidator : IImportRowValidator<Row>
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public async ValueTask<IReadOnlyList<ImportIssue>> ValidateAsync(
+            Row value,
+            long rowNumber,
+            CancellationToken cancellationToken)
+        {
+            Started.TrySetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return [];
         }
     }
 

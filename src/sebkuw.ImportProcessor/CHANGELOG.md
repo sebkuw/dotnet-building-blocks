@@ -4,6 +4,17 @@ All notable changes to `sebkuw.ImportProcessor` are documented here. The format 
 
 ## [Unreleased]
 
+### Added
+
+- Bounded concurrent mapping and validation controlled by `MaxDegreeOfParallelism` and `BufferCapacity` while preserving input order.
+- Incremental writer batches controlled by `BatchSize` and bounded result retention controlled by `MaxRetainedRows`.
+- Complete processed, valid, and invalid row counts even when the returned row report is intentionally truncated.
+
+### Changed
+
+- Advanced the package version to 2.1.0 for the additive large-file import API.
+- Organized source files by abstractions, configuration, internals, mapping, models, and processing without changing public namespaces or behavior.
+
 ## [2.0.0] - 2026-09-10
 
 ### Added
