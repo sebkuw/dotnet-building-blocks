@@ -18,6 +18,7 @@ This repository contains small, focused packages that keep application and domai
 - [sebkuw.QueryableProcessor](#sebkuwqueryableprocessor)
 - [Build](#build)
 - [Tests](#tests)
+- [Publishing to GitHub Packages](#publishing-to-github-packages)
 - [Project Standards](#project-standards)
 - [Changelog](#changelog)
 - [License](#license)
@@ -700,6 +701,22 @@ The test projects cover:
 - full query request processing with EF Core InMemory.
 
 Coverage is collected with `coverlet.runsettings`. The repository quality gate requires at least 90% line coverage and 80% branch coverage for each production library.
+
+## Publishing to GitHub Packages
+
+The manually triggered `Publish GitHub Packages` workflow publishes every `sebkuw.*` package present at an immutable commit from the default-branch history. Its default source is commit `9aefe4b63b82a15cbbec5c97767a9788852e41f3`, where the seven packages consumed by Meblicz are version `2.0.0`. Later releases must supply a full commit SHA from `main`; package versions come only from the projects at that commit.
+
+The workflow checks out release tooling separately from the selected source, restores locked dependencies, runs every quality gate from that source revision, verifies each packed version and repository commit against it, and then publishes to the `sebkuw` GitHub Packages NuGet feed. This makes a rerun select the same source and package versions rather than relabeling current code as an older release.
+
+Publishing uses only the workflow-scoped `GITHUB_TOKEN`, with `contents: read` and `packages: write`. No personal access token or stored package credential is required. Package metadata includes `https://github.com/sebkuw/dotnet-building-blocks` as the source repository, so GitHub can connect each package to this repository and expose granular package settings.
+
+After the first publication, grant the consumer repository access separately for each package:
+
+1. Open the package on the `sebkuw` GitHub profile and select **Package settings**.
+2. Under **Manage Actions access**, add `sebkuw/meblicz` with the **Read** role.
+3. Repeat for every `sebkuw.*` package consumed by Meblicz.
+
+The Meblicz workflow can then restore the private packages with its own workflow-scoped `GITHUB_TOKEN` and `packages: read`; no personal access token is needed. Keep credentials out of committed `NuGet.Config` files and logs.
 
 ## Project Standards
 
