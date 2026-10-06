@@ -23,6 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Reworked the public-facing repository README around package selection, architecture, a complete CQRS example, source/local-package setup, verification, and explicit limitations.
+- Reviewed all eight package guides against the public API; corrected incomplete setup examples, provider and memory assumptions, logging claims, package links, and stale XML descriptions.
+- Updated the Angular reference to `@sebkuw/shared-ui-list` 0.4.0 while preserving the existing JSON contract and documenting the former package name.
+- Removed the unused GitHub restore feed; repository dependency restore uses only the mapped public NuGet source.
 - Organized the ImportProcessor and ExportProcessor source trees by responsibility while preserving their public namespaces and APIs.
 - Added bounded concurrent mapping, ordered batch writes, and bounded row-report retention for large CSV imports; advanced `sebkuw.ImportProcessor` and `sebkuw.QueryableProcessor` to version 2.1.0 for their additive APIs.
 - Enforce the repository-wide C# style of omitting braces from single-statement `if` bodies.
@@ -38,4 +42,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Declared the repository's MIT license in every NuGet package and added package-content validation for it.
 - Localized all repository and package `AGENTS.md` instructions, development skills, and skill interface metadata into Polish.
 
-[Unreleased]: https://github.com/sebkuw/dotnet-building-blocks/compare/HEAD...HEAD
+### Fixed
+
+- Resolve the exception manager from the HTTP request scope, propagate aborted-request cancellation and failures after response start, and replace buffered error output cleanly.
+- Generate a correlation ID for whitespace-only request headers and supply a correlation scope to middleware logging.
+
+### Security
+
+- Prevent unexpected exception messages from leaking internal diagnostics through API error descriptions; preserve the existing JSON fields, error code, and status. Added regression coverage for the affected middleware paths.
+
+[Unreleased]: https://github.com/sebkuw/dotnet-building-blocks/commits/main

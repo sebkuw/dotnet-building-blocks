@@ -10,6 +10,7 @@ All notable changes to `sebkuw.ExportProcessor` are documented here. The format 
 
 ### Changed
 
+- Documented application setup, formula-protection boundaries, required pagination metadata, and partial-output behavior.
 - Organized source files by configuration, extensions, mapping, and models without changing public namespaces or behavior.
 
 [Unreleased]: https://github.com/sebkuw/dotnet-building-blocks/compare/HEAD...HEAD

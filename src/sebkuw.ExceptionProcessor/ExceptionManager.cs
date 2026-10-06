@@ -37,6 +37,8 @@ public class ExceptionManager : IExceptionManager
     /// <returns>An ExceptionResponse containing standardized error details.</returns>
     public ExceptionResponse HandleException(Exception exception, string? correlationId = null)
     {
+        ArgumentNullException.ThrowIfNull(exception);
+
         // Log the exception using injected logger
         _logger.LogException(exception);
 
@@ -53,7 +55,7 @@ public class ExceptionManager : IExceptionManager
             "UnhandledException",
             500,
             "An unexpected error occurred",
-            exception.Message,
+            "An unexpected error occurred. Please contact support with the trace ID.",
             correlationId);
     }
 }

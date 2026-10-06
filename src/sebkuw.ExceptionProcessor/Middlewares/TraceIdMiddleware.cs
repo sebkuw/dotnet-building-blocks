@@ -24,7 +24,7 @@ public class TraceIdMiddleware
     {
         // Sprawdź czy client przesłał Correlation ID
         string correlationId = context.Request.Headers.TryGetValue("X-Correlation-ID", out StringValues id)
-            && !StringValues.IsNullOrEmpty(id)
+            && !string.IsNullOrWhiteSpace(id.ToString())
             ? id.ToString()
             : Guid.NewGuid().ToString();
 

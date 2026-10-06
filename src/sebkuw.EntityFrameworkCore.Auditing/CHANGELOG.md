@@ -13,11 +13,12 @@ All notable changes to `sebkuw.EntityFrameworkCore.Auditing` are documented here
 
 ### Changed
 
+- Documented provider setup, DI lifetimes, time-provider replacement order, and tracked SaveChanges limitations.
 - Renamed the package, assembly, project, public namespaces, and auditing extension prefix to `sebkuw`; version 2.0.0 requires consumers to update package references, imports, and the interceptor registration call.
 - Centralized EF Core and dependency-injection package versions.
 - Declared the package's MIT license in NuGet metadata.
 - `AddEfCoreAuditing()` now registers the lifecycle interceptor in addition to the audit interceptor.
-- Advanced the package version to `1.1.0` for the additive public API.
+- Included the additive lifecycle API in the `2.0.0` package-prefix migration.
 
 ## [1.0.0] - 2026-08-11
 

@@ -10,6 +10,31 @@ dotnet add package sebkuw.ImportProcessor
 
 ## Define a mapping
 
+For a minimal report-only preview with no persistence adapters:
+
+```csharp
+using sebkuw.ImportProcessor;
+
+var map = new ImportMap<ProductImport>(() => new ProductImport())
+    .Map("sku", row => row.Sku)
+    .Map("price", row => row.Price);
+
+using var input = new StringReader("sku,price\nSKU-1,12.50");
+var result = await new ImportProcessor<ProductImport>(map)
+    .ProcessAsync(input, new ImportOptions { Preview = true }, CancellationToken.None);
+
+Console.WriteLine($"Valid: {result.ValidRowCount}; invalid: {result.InvalidRowCount}");
+
+public sealed class ProductImport
+{
+    public string Sku { get; set; } = string.Empty;
+    public decimal Price { get; set; }
+    public bool Enabled { get; set; }
+}
+```
+
+For the following extended examples, provide an application-owned `ProductImportValidator`, writer, idempotency store, and cancellation token.
+
 Mappings may use writable-property expressions, assignment delegates, built-in type conversion, or a custom converter.
 
 ```csharp
@@ -83,6 +108,11 @@ The parser supports configurable delimiters, escaped quotes, CRLF/LF records, an
 - The first record is treated as a header by default. Headerless files use one-based column names (`"1"`, `"2"`, ...).
 - The package does not define domain entities, transactions, database access, authorization, or upsert rules.
 - Writer and idempotency-store atomicity is owned by the application adapter.
+- Configure mappings before processing and do not mutate them while an import is running. A factory must create a fresh reference-type row for each record; writable-property mappings do not support mutating value-type rows reliably.
+- `required: true` requires the mapped column to exist, not a non-empty cell. Use row validators for required values and domain constraints.
+- There is no maximum record or field length. Apply upload size limits; buffering one very large field still consumes memory. Source values and conversion-error messages may contain uploaded data, so choose what to expose in an API report.
+- Idempotency uses case-sensitive keys and checks mapped rows even when they contain validation errors. The first occurrence reserves a key for that file; a later corrected occurrence with the same key is reported as a duplicate.
+- Cancellation and adapter failures propagate to the caller. CSV format failures become batch issues; they do not roll back earlier writes. Preview and execution are separate reads, so reopen or rewind the source before executing after a preview.
 
 ## Source layout
 
@@ -97,8 +127,9 @@ The folders organize the source without changing the public `sebkuw.ImportProces
 
 ## Development
 
-- [Library instructions](AGENTS.md)
-- [Changelog](CHANGELOG.md)
+Run the test command from the repository root. Full verification instructions are in the [repository guide](https://github.com/sebkuw/dotnet-building-blocks#verification).
+
+- [Changelog](https://github.com/sebkuw/dotnet-building-blocks/blob/main/src/sebkuw.ImportProcessor/CHANGELOG.md)
 - Tests: `tests/sebkuw.ImportProcessor.Tests`
 
 ```powershell

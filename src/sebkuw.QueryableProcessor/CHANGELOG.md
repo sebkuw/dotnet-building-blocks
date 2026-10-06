@@ -12,6 +12,7 @@ All notable changes to `sebkuw.QueryableProcessor` are documented here. The form
 
 ### Changed
 
+- Documented extension namespaces, provider requirements, supported JSON value conversions, field validation, and relational-test limitations; corrected outdated sorting and projection XML comments and package description.
 - Advanced the package version to 2.1.0 for the additive `ApplyRequest` API.
 - Renamed the package, assembly, project, and public namespaces to `sebkuw.QueryableProcessor`; version 2.0.0 requires consumers to update package references and imports.
 - Accept Angular sort values such as `createdAt desc` while preserving `desc_CreatedAt` compatibility.

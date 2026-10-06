@@ -1,8 +1,10 @@
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 using NLog;
@@ -63,8 +65,196 @@ public sealed class ExceptionProcessorTests
         Assert.Equal("UnhandledException", response.Code);
         Assert.Equal(500, response.HttpCode);
         Assert.Equal("An unexpected error occurred", response.MainText);
-        Assert.Equal("Something broke", response.Description);
+        Assert.Equal("An unexpected error occurred. Please contact support with the trace ID.", response.Description);
         Assert.Equal("trace-2", response.TraceId);
+    }
+
+    [Fact]
+    public void ExceptionManager_rejects_missing_exception()
+    {
+        var logger = new TestExceptionLogger();
+        var manager = new ExceptionManager(logger);
+
+        Assert.Throws<ArgumentNullException>(() => manager.HandleException(null!));
+
+        Assert.Null(logger.LoggedException);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionMiddleware_resolves_manager_from_request_scope_and_hides_internal_details()
+    {
+        var services = new ServiceCollection();
+        services.AddScoped<IExceptionLogger, TestExceptionLogger>();
+        services.AddScoped<IExceptionManager, ExceptionManager>();
+        await using var provider = services.BuildServiceProvider(validateScopes: true);
+        await using var scope = provider.CreateAsyncScope();
+        var logger = (TestExceptionLogger)scope.ServiceProvider.GetRequiredService<IExceptionLogger>();
+        var exception = new InvalidOperationException("Password=private-value; server=C:\\internal\\database");
+        var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+        context.Items["CorrelationId"] = "safe-trace";
+        await using var body = new MemoryStream();
+        context.Response.Body = body;
+        var middlewareLogger = new RecordingMiddlewareLogger();
+        var middleware = new GlobalExceptionMiddleware(
+            _ => throw exception, provider, middlewareLogger);
+
+        await middleware.InvokeAsync(context);
+
+        body.Position = 0;
+        using var document = await JsonDocument.ParseAsync(body);
+        var response = document.RootElement;
+        Assert.Same(exception, logger.LoggedException);
+        Assert.Equal(500, context.Response.StatusCode);
+        Assert.Equal("application/json", context.Response.ContentType);
+        Assert.Equal("safe-trace", context.Response.Headers["X-Correlation-ID"]);
+        Assert.Equal("safe-trace", response.GetProperty("traceId").GetString());
+        Assert.Equal("UnhandledException", response.GetProperty("code").GetString());
+        Assert.Equal(500, response.GetProperty("httpCode").GetInt32());
+        Assert.Equal("An unexpected error occurred", response.GetProperty("mainText").GetString());
+        Assert.Equal("An unexpected error occurred. Please contact support with the trace ID.", response.GetProperty("description").GetString());
+        Assert.Equal(DateTimeKind.Utc, response.GetProperty("timestamp").GetDateTime().Kind);
+        Assert.Equal(6, response.EnumerateObject().Count());
+        Assert.DoesNotContain("private-value", response.GetRawText(), StringComparison.Ordinal);
+        Assert.DoesNotContain("internal", response.GetRawText(), StringComparison.Ordinal);
+        var logScope = Assert.IsType<Dictionary<string, object>>(middlewareLogger.ScopeState);
+        Assert.Equal("safe-trace", logScope["CorrelationId"]);
+        Assert.Same(exception, middlewareLogger.LoggedException);
+    }
+
+    [Fact]
+    public void GlobalExceptionMiddleware_rejects_missing_service_provider()
+    {
+        Assert.Throws<ArgumentNullException>(() => new GlobalExceptionMiddleware(
+            _ => Task.CompletedTask, null!, NullLogger<GlobalExceptionMiddleware>.Instance));
+    }
+
+    [Fact]
+    public async Task GlobalExceptionMiddleware_handles_cancellation_unrelated_to_request_abort()
+    {
+        var services = new ServiceCollection();
+        var logger = new TestExceptionLogger();
+        services.AddSingleton<IExceptionLogger>(logger);
+        services.AddScoped<IExceptionManager, ExceptionManager>();
+        await using var provider = services.BuildServiceProvider(validateScopes: true);
+        await using var scope = provider.CreateAsyncScope();
+        var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+        await using var body = new MemoryStream();
+        context.Response.Body = body;
+        var exception = new OperationCanceledException("Application-owned cancellation");
+        var middleware = new GlobalExceptionMiddleware(
+            _ => throw exception, provider, NullLogger<GlobalExceptionMiddleware>.Instance);
+
+        await middleware.InvokeAsync(context);
+
+        body.Position = 0;
+        using var document = await JsonDocument.ParseAsync(body);
+        Assert.Equal(500, context.Response.StatusCode);
+        Assert.Equal("UnhandledException", document.RootElement.GetProperty("code").GetString());
+        Assert.Same(exception, logger.LoggedException);
+    }
+
+    private sealed class RecordingMiddlewareLogger : ILogger<GlobalExceptionMiddleware>
+    {
+        public object? ScopeState { get; private set; }
+
+        public Exception? LoggedException { get; private set; }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+        {
+            ScopeState = state;
+            return null;
+        }
+
+        public bool IsEnabled(Microsoft.Extensions.Logging.LogLevel logLevel) => true;
+
+        public void Log<TState>(Microsoft.Extensions.Logging.LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            LoggedException = exception;
+        }
+    }
+
+    [Fact]
+    public async Task GlobalExceptionMiddleware_preserves_exception_when_response_has_started()
+    {
+        await using var provider = new ServiceCollection().BuildServiceProvider();
+        var context = new DefaultHttpContext { RequestServices = provider };
+        context.Features.Set<IHttpResponseFeature>(new StartedResponseFeature());
+        var exception = new InvalidOperationException("Streaming failed");
+        var middleware = new GlobalExceptionMiddleware(
+            _ => throw exception, provider, NullLogger<GlobalExceptionMiddleware>.Instance);
+
+        var actual = await Assert.ThrowsAsync<InvalidOperationException>(() => middleware.InvokeAsync(context));
+
+        Assert.Same(exception, actual);
+        Assert.Equal(200, context.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionMiddleware_propagates_request_cancellation_without_error_response()
+    {
+        await using var provider = new ServiceCollection().BuildServiceProvider();
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var context = new DefaultHttpContext { RequestServices = provider, RequestAborted = cancellation.Token };
+        await using var body = new MemoryStream();
+        context.Response.Body = body;
+        var exception = new OperationCanceledException(cancellation.Token);
+        var middleware = new GlobalExceptionMiddleware(
+            _ => throw exception, provider, NullLogger<GlobalExceptionMiddleware>.Instance);
+
+        var actual = await Assert.ThrowsAsync<OperationCanceledException>(() => middleware.InvokeAsync(context));
+
+        Assert.Same(exception, actual);
+        Assert.Equal(200, context.Response.StatusCode);
+        Assert.Equal(0, body.Length);
+    }
+
+    [Fact]
+    public async Task GlobalExceptionMiddleware_replaces_buffered_response_with_error_json()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IExceptionLogger, TestExceptionLogger>();
+        services.AddScoped<IExceptionManager, ExceptionManager>();
+        await using var provider = services.BuildServiceProvider(validateScopes: true);
+        await using var scope = provider.CreateAsyncScope();
+        var context = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+        await using var body = new MemoryStream();
+        context.Response.Body = body;
+        var middleware = new GlobalExceptionMiddleware(async httpContext =>
+        {
+            await httpContext.Response.WriteAsync("partial content that must be discarded");
+            httpContext.Response.Headers["Content-Length"] = "999";
+            throw new ValidationException("Invalid input");
+        }, provider, NullLogger<GlobalExceptionMiddleware>.Instance);
+
+        await middleware.InvokeAsync(context);
+
+        body.Position = 0;
+        using var document = await JsonDocument.ParseAsync(body);
+        Assert.Equal("ValidationError", document.RootElement.GetProperty("code").GetString());
+        Assert.False(context.Response.Headers.ContainsKey("Content-Length"));
+        Assert.Equal(400, context.Response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task TraceIdMiddleware_generates_correlation_id_for_blank_header(string header)
+    {
+        var context = new DefaultHttpContext();
+        context.Request.Headers["X-Correlation-ID"] = header;
+        var middleware = new TraceIdMiddleware(_ => Task.CompletedTask);
+
+        await middleware.InvokeAsync(context);
+
+        var correlationId = Assert.IsType<string>(context.Items["CorrelationId"]);
+        Assert.True(Guid.TryParse(correlationId, out _));
+        Assert.Equal(correlationId, context.Response.Headers["X-Correlation-ID"]);
+    }
+
+    private sealed class StartedResponseFeature : HttpResponseFeature
+    {
+        public override bool HasStarted => true;
     }
 
     [Fact]

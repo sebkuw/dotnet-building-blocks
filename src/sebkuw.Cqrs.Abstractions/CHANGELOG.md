@@ -11,6 +11,7 @@ All notable changes to `sebkuw.Cqrs.Abstractions` are documented here. The forma
 
 ### Changed
 
+- Clarified caller-owned cancellation and the boundary between contracts and application persistence.
 - Renamed the package, assembly, project, and public namespaces to `sebkuw.Cqrs.Abstractions`; version 2.0.0 requires consumers to update package references and imports.
 - Declared the package's MIT license in NuGet metadata.
 
