@@ -14,7 +14,7 @@ public static class RequestSolver
 {
     /// <summary>
     /// Processes an IQueryable query by applying filtering, sorting, pagination,
-    /// and mapping results using AutoMapper, with support for asynchronous execution.
+    /// and projecting results using the supplied expression, with asynchronous EF Core execution.
     /// </summary>
     /// <typeparam name="TSource">The entity type.</typeparam>
     /// <typeparam name="TDestination">The DTO type.</typeparam>

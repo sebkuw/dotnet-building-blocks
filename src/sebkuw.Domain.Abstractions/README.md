@@ -50,16 +50,20 @@ Use `DeactivatableAuditableEntity<TId>` when an entity should leave active use w
 ```csharp
 using sebkuw.Domain.Abstractions.Deactivation;
 
+var product = new Product();
+product.Deactivate(Guid.NewGuid(), TimeProvider.System.GetUtcNow());
+product.Reactivate();
+
 public sealed class Product : DeactivatableAuditableEntity<Guid>
 {
     public string Name { get; set; } = string.Empty;
 }
 
-product.Deactivate(currentUserId, TimeProvider.System.GetUtcNow());
-product.Reactivate();
 ```
 
 New deactivatable entities are active. Deactivation requires a non-empty user ID and a UTC timestamp. Repeating it while inactive preserves the current deactivation metadata; reactivation clears that metadata. `IDeactivatable` and `IAppendOnlyEntity` both implement `IHardDeleteProtected`.
+
+`Deactivate` rejects `Guid.Empty` with `ArgumentOutOfRangeException` and a non-UTC timestamp with `ArgumentException`. Audit properties use `DateTimeOffset`; `CreatedBy` is a string, while `DeactivatedBy` is a nullable `Guid`. Applications must assign identifiers and creation metadata before persistence; declaring `CreatedBy` non-nullable does not populate it automatically.
 
 ## Compatibility
 
@@ -71,9 +75,9 @@ This package defines domain contracts only. It does not enforce persistence rule
 
 ## Development
 
-- [Library instructions](AGENTS.md)
-- [Development skill](../../.agents/skills/develop-sebkuw-domain-abstractions/SKILL.md)
-- [Changelog](CHANGELOG.md)
+Run the test command from the repository root. Full verification instructions are in the [repository guide](https://github.com/sebkuw/dotnet-building-blocks#verification).
+
+- [Changelog](https://github.com/sebkuw/dotnet-building-blocks/blob/main/src/sebkuw.Domain.Abstractions/CHANGELOG.md)
 - Tests: `tests/sebkuw.Domain.Abstractions.Tests`
 
 ```powershell

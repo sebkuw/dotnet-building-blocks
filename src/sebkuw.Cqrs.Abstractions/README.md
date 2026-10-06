@@ -27,12 +27,13 @@ public sealed class CreateOrderHandler : ICommandHandler<CreateOrder, Guid>
 {
     public Task<Guid> Handle(CreateOrder command, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         return Task.FromResult(Guid.NewGuid());
     }
 }
 ```
 
-The package does not prescribe a mediator, dispatcher, DI container, validation pipeline, or application architecture. Every handler accepts a `CancellationToken`.
+The package does not prescribe a mediator, dispatcher, DI container, validation pipeline, or application architecture. Every handler accepts a `CancellationToken`; the implementation must observe it and pass it to downstream I/O. The example generates an identifier only; persistence belongs to the application.
 
 ## Compatibility
 
@@ -40,9 +41,9 @@ The package does not prescribe a mediator, dispatcher, DI container, validation 
 
 ## Development
 
-- [Library instructions](AGENTS.md)
-- [Development skill](../../.agents/skills/develop-sebkuw-cqrs-abstractions/SKILL.md)
-- [Changelog](CHANGELOG.md)
+Run the test command from the repository root. Full verification instructions are in the [repository guide](https://github.com/sebkuw/dotnet-building-blocks#verification).
+
+- [Changelog](https://github.com/sebkuw/dotnet-building-blocks/blob/main/src/sebkuw.Cqrs.Abstractions/CHANGELOG.md)
 - Tests: `tests/sebkuw.Cqrs.Abstractions.Tests`
 
 ```powershell

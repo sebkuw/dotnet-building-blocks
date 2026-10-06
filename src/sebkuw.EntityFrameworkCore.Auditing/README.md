@@ -22,6 +22,11 @@ public sealed class CurrentUserProvider : ICurrentUserProvider
 ## Register and attach the interceptors
 
 ```csharp
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using sebkuw.EntityFrameworkCore.Auditing.Abstractions;
+using sebkuw.EntityFrameworkCore.Auditing.Extensions;
+
 builder.Services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
 builder.Services.AddEfCoreAuditing();
 
@@ -35,7 +40,11 @@ builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
 
 `AddEfCoreAuditing()` registers both `AuditSaveChangesInterceptor` and `EntityLifecycleInterceptor`. `AddSebkuwAuditingInterceptors()` attaches them in lifecycle-first order so invalid writes are rejected before audit values are applied.
 
+The example assumes an application-owned `AppDbContext`, a connection string, and a separately installed EF Core SQL Server provider. Choose the provider used by your application; this package does not install one. Audit interception is scoped, lifecycle interception and the default time provider are singletons. Register a custom `IDateTimeProvider` **after** `AddEfCoreAuditing()` to replace the default for single-service resolution.
+
 For added entities implementing `ICreatedEntity`, including `CreatedAuditableEntity<TId>`, the audit interceptor sets creation user and UTC time. For modified entities implementing `IUpdatedEntity`, it sets update user and UTC time while protecting original creation metadata. Replace `IDateTimeProvider` for deterministic time.
+
+Both synchronous and asynchronous saves are supported. Added entities do not receive generated update metadata; caller-supplied update values are not cleared. Creation-field protection prevents database updates to those fields; it does not reset changed values on the tracked object. Current-user and time providers must return application-approved user values and UTC timestamps.
 
 ## Lifecycle enforcement
 
@@ -49,13 +58,13 @@ The interceptor does not silently convert deletes into deactivation, add global 
 
 ## Design constraints
 
-The package knows only the generic audit and lifecycle contracts from `sebkuw.Domain.Abstractions`. It does not depend on HTTP, a particular identity provider, or a concrete `DbContext`. Lifecycle enforcement applies to EF Core's standard tracked `SaveChanges` pipeline; direct SQL and external database writers require database-level controls when equivalent enforcement is needed.
+The package knows only the generic audit and lifecycle contracts from `sebkuw.Domain.Abstractions`. It does not depend on HTTP, a particular identity provider, or a concrete `DbContext`. Lifecycle enforcement applies to EF Core's standard tracked `SaveChanges` pipeline; `ExecuteUpdate`, `ExecuteDelete`, direct SQL, and external database writers require separate controls when equivalent enforcement is needed.
 
 ## Development
 
-- [Library instructions](AGENTS.md)
-- [Development skill](../../.agents/skills/develop-sebkuw-efcore-auditing/SKILL.md)
-- [Changelog](CHANGELOG.md)
+Run the test command from the repository root. Full verification instructions are in the [repository guide](https://github.com/sebkuw/dotnet-building-blocks#verification).
+
+- [Changelog](https://github.com/sebkuw/dotnet-building-blocks/blob/main/src/sebkuw.EntityFrameworkCore.Auditing/CHANGELOG.md)
 - Tests: `tests/sebkuw.EntityFrameworkCore.Auditing.Tests`
 
 ```powershell

@@ -12,6 +12,7 @@ All notable changes to `sebkuw.ImportProcessor` are documented here. The format 
 
 ### Changed
 
+- Added a complete preview example and documented record memory limits, mapping requirements, idempotency behavior, and safe report handling.
 - Advanced the package version to 2.1.0 for the additive large-file import API.
 - Organized source files by abstractions, configuration, internals, mapping, models, and processing without changing public namespaces or behavior.
 

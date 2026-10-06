@@ -8,7 +8,7 @@
 		<PackageId>sebkuw.QueryableProcessor</PackageId>
 		<Version>2.1.0</Version>
 		<Authors>Sebastian Wnorowski</Authors>
-		<Description>A powerful library for dynamic filtering, sorting, and pagination of IQueryable collections.</Description>
+		<Description>Dynamic IQueryable filtering, sorting, pagination, and EF Core projection with explicit JSON request and response contracts.</Description>
 		<PackageTags>LINQ IQueryable Sorting Filtering Pagination Dynamic</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>

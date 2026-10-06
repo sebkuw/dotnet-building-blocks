@@ -13,10 +13,11 @@ All notable changes to `sebkuw.Domain.Abstractions` are documented here. The for
 
 ### Changed
 
+- Corrected the deactivation example and documented audit initialization and validation rules.
 - Renamed the package, assembly, project, and public namespaces to `sebkuw.Domain.Abstractions`; version 2.0.0 requires consumers to update package references and imports.
 - Declared the package's MIT license in NuGet metadata.
 - `AuditableEntity<TId>` now inherits creation metadata from `CreatedAuditableEntity<TId>` without changing its existing public properties.
-- Advanced the package version to `1.1.0` for the additive public API.
+- Included the additive lifecycle API in the `2.0.0` package-prefix migration.
 
 ## [1.0.0] - 2026-08-11
 

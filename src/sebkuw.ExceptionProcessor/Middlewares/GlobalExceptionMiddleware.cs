@@ -29,7 +29,6 @@ public class GlobalExceptionMiddleware
         "Unhandled exception while processing the request.");
 
     private readonly RequestDelegate _next;
-    private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
 
@@ -37,7 +36,7 @@ public class GlobalExceptionMiddleware
     /// Initializes a new instance of the GlobalExceptionMiddleware.
     /// </summary>
     /// <param name="next">The next middleware in the pipeline.</param>
-    /// <param name="serviceProvider">The application service provider.</param>
+    /// <param name="serviceProvider">The application service provider, retained for constructor compatibility. Services are resolved from the request scope.</param>
     /// <param name="logger">The injected logger.</param>
     public GlobalExceptionMiddleware(
         RequestDelegate next,
@@ -45,7 +44,7 @@ public class GlobalExceptionMiddleware
         ILogger<GlobalExceptionMiddleware> logger)
     {
         _next = next;
-        _serviceProvider = serviceProvider;
+        ArgumentNullException.ThrowIfNull(serviceProvider);
         _logger = logger;
 
         _jsonOptions = new JsonSerializerOptions
@@ -64,7 +63,11 @@ public class GlobalExceptionMiddleware
         {
             await _next(context);
         }
-        catch (Exception ex)
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex) when (!context.Response.HasStarted)
         {
             await HandleExceptionAsync(context, ex);
         }
@@ -72,8 +75,7 @@ public class GlobalExceptionMiddleware
 
     private async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
-        // Pobierz scoped serwis z IServiceProvider na czas obsługi błędu
-        var exceptionManager = _serviceProvider.GetRequiredService<IExceptionManager>();
+        var exceptionManager = context.RequestServices.GetRequiredService<IExceptionManager>();
 
         string correlationId = context.Items.TryGetValue("CorrelationId", out object? item)
             && item is string value
@@ -81,8 +83,14 @@ public class GlobalExceptionMiddleware
                 ? value
                 : Activity.Current?.Id ?? context.TraceIdentifier;
 
+        using var logScope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["CorrelationId"] = correlationId
+        });
+
         var response = exceptionManager.HandleException(exception, correlationId);
 
+        context.Response.Clear();
         context.Response.StatusCode = response.HttpCode;
         context.Response.ContentType = "application/json";
         context.Response.Headers["X-Correlation-ID"] = correlationId;
@@ -90,6 +98,6 @@ public class GlobalExceptionMiddleware
         LogRequestException(_logger, exception);
 
         var jsonResponse = JsonSerializer.Serialize(response, _jsonOptions);
-        await context.Response.WriteAsync(jsonResponse);
+        await context.Response.WriteAsync(jsonResponse, context.RequestAborted);
     }
 }

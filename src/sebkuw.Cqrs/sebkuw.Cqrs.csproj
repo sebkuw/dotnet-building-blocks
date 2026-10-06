@@ -13,7 +13,7 @@
 			Install and call:
 			services.AddCqrsFromAssemblyContaining&lt;YourMarker&gt;();
 
-			Scans IQueryHandler&lt;&gt;, ICommandHandler&lt;&gt; and ICommandHandler&lt;,&gt; from specified assemblies.
+			Scans IQueryHandler&lt;,&gt;, ICommandHandler&lt;&gt; and ICommandHandler&lt;,&gt; from specified assemblies.
 
 			Dependencies: sebkuw.Cqrs.Abstractions, Scrutor
 		</Description>

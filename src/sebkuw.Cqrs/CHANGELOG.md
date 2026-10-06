@@ -10,6 +10,7 @@ All notable changes to `sebkuw.Cqrs` are documented here. The format follows Kee
 
 ### Changed
 
+- Clarified handler namespaces, scoped resolution, non-public scanning, and registration of additional implemented interfaces.
 - Renamed the package, assembly, project, and public namespaces to `sebkuw.Cqrs`; version 2.0.0 requires consumers to update package references and imports.
 - Centralized dependency versions across the repository.
 - Declared the package's MIT license in NuGet metadata.

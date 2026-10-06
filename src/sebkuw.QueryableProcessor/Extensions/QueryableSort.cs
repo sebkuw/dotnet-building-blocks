@@ -12,7 +12,7 @@ public static class QueryableSort
 {
     /// <summary>
     /// Applies dynamic sorting to an IQueryable collection based on the specified property path.
-    /// If propertyPath is null, empty, or invalid, sorting defaults to "desc_Id".
+    /// If propertyPath is null, empty, or invalid, the source ordering is unchanged.
     /// </summary>
     /// <typeparam name="T">The type of elements in the IQueryable collection.</typeparam>
     /// <param name="source">The IQueryable source to sort.</param>

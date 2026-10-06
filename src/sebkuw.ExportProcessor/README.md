@@ -29,6 +29,8 @@ var map = new CsvExportMap<ProductExportRow>()
     .Map("id", row => row.Id, header: "ID")
     .Map("name", row => row.Name, header: "Product")
     .Map("price", row => row.Price, formatter: (value, culture) => value.ToString("N2", culture));
+
+public sealed record ProductExportRow(int Id, string Name, decimal Price);
 ```
 
 The map is a case-insensitive allowlist. Unknown, blank, or duplicate requested columns are rejected instead of being resolved through reflection.
@@ -58,7 +60,7 @@ The query is projected by EF Core before asynchronous enumeration. CSV rows are 
 - UTF-8 with a byte-order mark is the default for spreadsheet compatibility.
 - Headers are included by default and may be disabled.
 - Commas, configured delimiters, quotes, and line breaks are escaped according to CSV rules.
-- Values beginning with `=`, `+`, `-`, or `@` are prefixed with an apostrophe by default to prevent spreadsheet formula injection.
+- Values whose first character is `=`, `+`, `-`, or `@` are prefixed with an apostrophe by default, including headers and formatted negative numbers. This protection does not inspect leading whitespace or control characters; validate untrusted text according to the spreadsheet consuming the file.
 - Default formatting uses invariant culture; both culture and per-column formatters are configurable.
 
 Applications remain responsible for authorization, filename selection, response headers, and deciding which mapped columns a caller may select. The package never discovers entity properties from untrusted input.
@@ -66,8 +68,11 @@ Applications remain responsible for authorization, filename selection, response 
 ## Limitations
 
 - The source must support EF Core asynchronous enumeration.
+- The examples assume a context, request, destination stream, and cancellation token supplied by the application. `RequestDto.PaginationOptions` remains required for both export scopes; page limits are applied only in `CurrentPage` scope.
+- Query paths for filters and sorting resolve entity properties separately from the CSV column map. Restrict allowed query fields in the application.
 - Selected columns control CSV output; the projection expression itself is static, so it should contain only fields intended for this export use case.
 - The package does not buffer or return a downloadable file object. ASP.NET Core applications should set their own `Content-Type`, filename, and authorization policy before writing to the response stream.
+- Query, formatter, or output failures may leave a partial file. Once an HTTP response has started, exception middleware cannot replace it with a JSON error.
 
 ## Source layout
 
@@ -80,8 +85,9 @@ The folders organize the source without changing the public `sebkuw.ExportProces
 
 ## Development
 
-- [Library instructions](AGENTS.md)
-- [Changelog](CHANGELOG.md)
+Run the test command from the repository root. Full verification instructions are in the [repository guide](https://github.com/sebkuw/dotnet-building-blocks#verification).
+
+- [Changelog](https://github.com/sebkuw/dotnet-building-blocks/blob/main/src/sebkuw.ExportProcessor/CHANGELOG.md)
 - Tests: `tests/sebkuw.ExportProcessor.Tests`
 
 ```powershell

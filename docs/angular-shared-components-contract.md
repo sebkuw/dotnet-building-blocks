@@ -2,9 +2,9 @@
 
 This document defines the HTTP-facing compatibility boundary between this repository and:
 
-- repository: `C:\A_REPOS\angular-shared-components`
-- package: `@netdevs/shared-ui-list`
-- reference version: `0.0.1`
+- repository: [angular-shared-components](https://github.com/sebkuw/angular-shared-components)
+- package: `@sebkuw/shared-ui-list` (previously `@netdevs/shared-ui-list`)
+- reference version: `0.4.0`, checked against the local source on 2026-10-05
 - reference models: `projects/shared-ui-list/src/lib/components/dynamic-table/models`
 
 The contract is protected by tests in `sebkuw.QueryableProcessor.Tests` and `sebkuw.ExceptionProcessor.Tests`. Changes to either side require synchronized contract tests, documentation, changelogs, and SemVer analysis.
@@ -88,7 +88,7 @@ The .NET response uses explicit PascalCase JSON names, even when the application
 }
 ```
 
-`@netdevs/shared-ui-list` currently declares all fields except `HasPreviousPage`; the additional field is backward-compatible for JSON consumers. Changing a field name, type, page indexing, or total-page calculation requires a coordinated breaking-change review.
+`@sebkuw/shared-ui-list` currently declares all fields except `HasPreviousPage`; the additional field is backward-compatible for JSON consumers. Changing a field name, type, page indexing, or total-page calculation requires a coordinated breaking-change review.
 
 ## CSV export integration
 
@@ -115,11 +115,13 @@ Angular `ExportRequest.filters` and `sort` can be converted to the established r
 
 Rules:
 
-- Accept `X-Correlation-ID` from the request when it is non-empty; otherwise generate one.
-- Preserve one value in `HttpContext.Items["CorrelationId"]`, the response header, error body, and structured logs.
+- Accept `X-Correlation-ID` from the request when it is non-whitespace; otherwise generate one.
+- Preserve one value in `HttpContext.Items["CorrelationId"]`, the response header, and error body. The middleware supplies a `CorrelationId` scope to Microsoft logging; the provider must record scopes. The bundled NLog adapter needs application customization to include correlation in its own output.
 - Register `TraceIdMiddleware` before `GlobalExceptionMiddleware`.
 - Treat `code` as the stable machine-readable discriminator and `mainText`/`description` as safe display text.
 - Never expose secrets, stack traces, database details, internal paths, or unreviewed infrastructure messages.
+- Unknown exceptions use `code: "UnhandledException"`, HTTP 500, and the fixed description `An unexpected error occurred. Please contact support with the trace ID.` Custom exception descriptions remain application-owned safe text.
+- Request-abort cancellation and failures after response start propagate rather than producing a replacement JSON body.
 
 ## Verification checklist
 

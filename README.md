@@ -1,706 +1,157 @@
 # sebkuw Building Blocks
 
-Reusable .NET building blocks for Clean Architecture applications.
+[![CI](https://github.com/sebkuw/dotnet-building-blocks/actions/workflows/ci.yml/badge.svg)](https://github.com/sebkuw/dotnet-building-blocks/actions/workflows/ci.yml)
 
-This repository contains small, focused packages that keep application and domain code independent from infrastructure concerns. The current packages cover domain entities, auditing contracts, CQRS contracts, CQRS handler registration for Microsoft dependency injection, EF Core auditing, API exception processing, CSV import and export, and dynamic query processing.
+Small, reusable **.NET 10 / C# 14** libraries for domain models, CQRS, EF Core persistence, API errors, and CSV data pipelines.
 
-## Table of Contents
-
-- [Packages](#packages)
-- [Repository Structure](#repository-structure)
-- [sebkuw.Domain.Abstractions](#sebkuwdomainabstractions)
-- [sebkuw.Cqrs.Abstractions](#sebkuwcqrsabstractions)
-- [sebkuw.Cqrs](#sebkuwcqrs)
-- [sebkuw.EntityFrameworkCore.Auditing](#sebkuwentityframeworkcoreauditing)
-- [sebkuw.ExceptionProcessor](#sebkuwexceptionprocessor)
-- [sebkuw.ExportProcessor](#sebkuwexportprocessor)
-- [sebkuw.ImportProcessor](#sebkuwimportprocessor)
-- [sebkuw.QueryableProcessor](#sebkuwqueryableprocessor)
-- [Build](#build)
-- [Tests](#tests)
-- [Publishing to GitHub Packages](#publishing-to-github-packages)
-- [Project Standards](#project-standards)
-- [Changelog](#changelog)
-- [License](#license)
+The packages separate application contracts from infrastructure integrations. Use the pieces your application needs: domain and CQRS abstractions have no runtime package dependencies, while EF Core, ASP.NET Core, and dependency injection integrations live in separate packages.
 
 ## Packages
 
-| Package | Purpose |
-| --- | --- |
-| [`sebkuw.Domain.Abstractions`](src/sebkuw.Domain.Abstractions/README.md) | Base entity, auditing, deactivation, and persistence lifecycle contracts for domain models. |
-| [`sebkuw.Cqrs.Abstractions`](src/sebkuw.Cqrs.Abstractions/README.md) | Dependency-free CQRS contracts for commands, queries and handlers. |
-| [`sebkuw.Cqrs`](src/sebkuw.Cqrs/README.md) | Automatic CQRS handler registration for `Microsoft.Extensions.DependencyInjection` using Scrutor. |
-| [`sebkuw.EntityFrameworkCore.Auditing`](src/sebkuw.EntityFrameworkCore.Auditing/README.md) | EF Core interceptors for automatic audit metadata and entity lifecycle enforcement. |
-| [`sebkuw.ExceptionProcessor`](src/sebkuw.ExceptionProcessor/README.md) | ASP.NET Core exception middleware, correlation IDs and structured JSON error responses. |
-| [`sebkuw.ExportProcessor`](src/sebkuw.ExportProcessor/README.md) | Streaming CSV exports from filtered and sorted EF Core queries with explicit selectable columns. |
-| [`sebkuw.ImportProcessor`](src/sebkuw.ImportProcessor/README.md) | Streaming, bounded CSV imports with concurrent mapping, ordered batch writes, typed validation, preview, reporting and idempotency hooks. |
-| [`sebkuw.QueryableProcessor`](src/sebkuw.QueryableProcessor/README.md) | Dynamic `IQueryable` filtering, sorting, pagination and Angular-compatible response metadata. |
+Each package has its own usage guide, tests, version, and changelog.
 
-## Migration to the `sebkuw` package prefix
+| Package | What it provides | Runtime integration |
+| --- | --- | --- |
+| [sebkuw.Domain.Abstractions](src/sebkuw.Domain.Abstractions/README.md) | Entity base types, creation/update audit contracts, explicit deactivation, and append-only/hard-delete markers. | None |
+| [sebkuw.Cqrs.Abstractions](src/sebkuw.Cqrs.Abstractions/README.md) | Typed command, query, and handler contracts with cancellation tokens. | None |
+| [sebkuw.Cqrs](src/sebkuw.Cqrs/README.md) | Explicit assembly scanning and scoped registration of CQRS handlers. | Microsoft DI, Scrutor |
+| [sebkuw.EntityFrameworkCore.Auditing](src/sebkuw.EntityFrameworkCore.Auditing/README.md) | Audit metadata and lifecycle enforcement during tracked `SaveChanges` operations. | EF Core 10, Microsoft DI |
+| [sebkuw.ExceptionProcessor](src/sebkuw.ExceptionProcessor/README.md) | Structured API errors, correlation middleware, and replaceable exception logging. | ASP.NET Core 10, bundled NLog adapter |
+| [sebkuw.QueryableProcessor](src/sebkuw.QueryableProcessor/README.md) | Expression-based filtering, sorting, pagination, and projected list responses. | EF Core 10 for asynchronous execution |
+| [sebkuw.ExportProcessor](src/sebkuw.ExportProcessor/README.md) | Streaming CSV exports with explicit column selection, query criteria, and optional page/row limits. | EF Core 10, QueryableProcessor |
+| [sebkuw.ImportProcessor](src/sebkuw.ImportProcessor/README.md) | CSV parsing, typed mapping, validation, preview, ordered batch writes, and idempotency hooks. | None; persistence adapters belong to the application |
 
-Version 2.0.0 changes the package identity and namespaces of every library. Replace each existing package reference and `using` directive with the matching `sebkuw.*` name. The solution, production projects, test projects, assembly names, and the auditing extension `AddSebkuwAuditingInterceptors()` use the same prefix.
+All packages target `net10.0`. The code does not require Angular; the query and error JSON contracts also support the companion [angular-shared-components](https://github.com/sebkuw/angular-shared-components) project. See the [HTTP compatibility contract](docs/angular-shared-components-contract.md) for field names and examples.
 
-## Repository Structure
+## Design
+
+- **Contracts stay independent.** Domain and CQRS abstractions do not reference EF Core, HTTP, a DI container, or a mediator.
+- **Composition is explicit.** Choose assemblies, attach interceptors, define export columns, and provide import persistence adapters in the application.
+- **I/O supports cancellation.** Query execution, CSV processing, and handler contracts accept `CancellationToken`.
+- **Consumer concerns stay with the consumer.** Authentication, authorization, transactions, database providers, and domain rules are application responsibilities.
+
+The CQRS integration registers handlers; applications invoke them directly or supply their own dispatcher. Lifecycle markers are enforced by the EF Core interceptors when attached to a context.
+
+## Quick start: CQRS registration
+
+When the package is available in your configured NuGet feed, install it and the DI container implementation:
+
+```powershell
+dotnet add package sebkuw.Cqrs
+dotnet add package Microsoft.Extensions.DependencyInjection --version 10.0.5
+```
+
+This complete console example registers a query handler, resolves it within a scope, and invokes it through its public contract:
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using sebkuw.Cqrs;
+using sebkuw.Cqrs.Abstractions;
+
+var services = new ServiceCollection();
+services.AddCqrsFromAssemblyContaining<GreetingHandler>();
+
+using var provider = services.BuildServiceProvider(validateScopes: true);
+using var scope = provider.CreateScope();
+
+var handler = scope.ServiceProvider
+    .GetRequiredService<IQueryHandler<GreetingQuery, string>>();
+
+Console.WriteLine(await handler.Handle(new GreetingQuery("World"), CancellationToken.None));
+
+public sealed record GreetingQuery(string Name) : IQuery<string>;
+
+public sealed class GreetingHandler : IQueryHandler<GreetingQuery, string>
+{
+    public Task<string> Handle(GreetingQuery query, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult($"Hello, {query.Name}!");
+    }
+}
+```
+
+For persistence and HTTP examples, start with the [auditing](src/sebkuw.EntityFrameworkCore.Auditing/README.md), [query processing](src/sebkuw.QueryableProcessor/README.md), or [API error handling](src/sebkuw.ExceptionProcessor/README.md) guide.
+
+## Build from source
+
+Prerequisites: the **.NET SDK 10.0.400 feature band** (latest patch permitted by `global.json`) and **PowerShell 7** for the verification scripts. Runtime dependencies restore from `nuget.org` without GitHub credentials.
+
+```powershell
+git clone https://github.com/sebkuw/dotnet-building-blocks.git
+cd dotnet-building-blocks
+dotnet restore sebkuw.BuildingBlocks.slnx --locked-mode
+dotnet build sebkuw.BuildingBlocks.slnx --configuration Release --no-restore
+dotnet test sebkuw.BuildingBlocks.slnx --configuration Release --no-build
+```
+
+Package installation depends on publication to your configured feed. To use the current checkout without a published release, build the local packages:
+
+```powershell
+dotnet pack sebkuw.BuildingBlocks.slnx --configuration Release --no-build --output artifacts/packages
+```
+
+In a separate consumer project, configure the generated directory as a package source alongside `nuget.org`. This example `NuGet.Config` routes `sebkuw.*` to the local packages and external dependencies to the public feed; replace the local path with your checkout path:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="local-sebkuw" value="C:\repos\dotnet-building-blocks\artifacts\packages" />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+  </packageSources>
+  <packageSourceMapping>
+    <packageSource key="local-sebkuw">
+      <package pattern="sebkuw.*" />
+    </packageSource>
+    <packageSource key="nuget.org">
+      <package pattern="*" />
+    </packageSource>
+  </packageSourceMapping>
+</configuration>
+```
+
+## Verification
+
+The [CI workflow](.github/workflows/ci.yml) runs locked dependency restore, license verification, formatting, a Release build, tests with coverage, and package-content verification. NuGet vulnerability auditing is enabled for direct and transitive dependencies, and reported vulnerability warnings fail the build.
+
+Run the same checks locally from the repository root:
+
+```powershell
+dotnet restore sebkuw.BuildingBlocks.slnx --locked-mode
+./eng/verify-package-licenses.ps1
+dotnet format sebkuw.BuildingBlocks.slnx --verify-no-changes --no-restore
+dotnet build sebkuw.BuildingBlocks.slnx --configuration Release --no-restore
+dotnet test sebkuw.BuildingBlocks.slnx --configuration Release --no-build --settings coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory artifacts/TestResults
+./eng/verify-coverage.ps1
+dotnet pack sebkuw.BuildingBlocks.slnx --configuration Release --no-build --output artifacts/packages
+./eng/verify-packages.ps1
+```
+
+The package checker expects one version of each package. If you retain earlier build outputs, pack into a fresh directory and pass it as `-PackageDirectory` to `verify-packages.ps1`. Likewise, pass the current test run's directory as `-ResultsDirectory` to `verify-coverage.ps1` to avoid mixing coverage from different runs.
+
+The coverage gate requires **90% line coverage and 80% branch coverage per production library**. Tests cover public contracts, DI registration, auditing/lifecycle rules, middleware and JSON responses, query operations, CSV formatting, import preview and batching, and cancellation. EF Core integration tests currently use **InMemory**; they do not establish SQL translation or behavior for every relational provider. Validate query expressions against the provider used by your application.
+
+Generated NuGet packages contain their assembly, XML API documentation, README, changelog, and MIT license metadata. Build outputs and coverage reports are ignored by Git.
+
+## Limitations
+
+- Dynamic query paths resolve public properties. Applications should restrict permitted filter/sort fields and apply authorization before processing a request. Use a stable sort for pagination.
+- Auditing and lifecycle rules apply to tracked `SaveChanges` operations. Bulk operations, direct SQL, and external writers need separate enforcement.
+- CSV import is streaming, but defaults retain all row reports and buffer valid values for a single write. Configure finite batch size and report retention for large files; individual records and idempotency keys also consume memory.
+- CSV writes are incremental. Applications own transactions for imports and handling of partially written export responses.
+- Custom API exceptions carry client-visible descriptions. Supply only safe display text; unexpected exception messages are hidden from clients.
+
+## Repository layout
 
 ```text
-src/
-  sebkuw.Domain.Abstractions/
-  sebkuw.Cqrs.Abstractions/
-  sebkuw.Cqrs/
-  sebkuw.EntityFrameworkCore.Auditing/
-  sebkuw.ExceptionProcessor/
-  sebkuw.ExportProcessor/
-  sebkuw.ImportProcessor/
-  sebkuw.QueryableProcessor/
-tests/
-  sebkuw.Cqrs.Abstractions.Tests/
-  sebkuw.Domain.Abstractions.Tests/
-  sebkuw.Cqrs.Tests/
-  sebkuw.EntityFrameworkCore.Auditing.Tests/
-  sebkuw.ExceptionProcessor.Tests/
-  sebkuw.ExportProcessor.Tests/
-  sebkuw.ImportProcessor.Tests/
-  sebkuw.QueryableProcessor.Tests/
+src/       Eight independently packaged libraries and their usage guides
+tests/     Corresponding xUnit unit, integration, and contract test projects
+docs/      Angular/.NET HTTP compatibility contract
+eng/       License, coverage, and NuGet package verification scripts
+.github/   Continuous integration workflow
 ```
-
-## sebkuw.Domain.Abstractions
-
-### Purpose
-
-`sebkuw.Domain.Abstractions` provides lightweight base types and contracts for domain entities. It is dependency-free and can be referenced from domain or application projects without bringing in infrastructure packages.
-
-### Installation
-
-```bash
-dotnet add package sebkuw.Domain.Abstractions
-```
-
-### Included Types
-
-- `IEntity<TId>`
-- `Entity<TId>`
-- `GuidEntity`
-- `ICreatedEntity`
-- `IUpdatedEntity`
-- `CreatedAuditableEntity<TId>`
-- `AuditableEntity<TId>`
-- `AuditableGuidEntity`
-- `IHardDeleteProtected`
-- `IDeactivatable`
-- `DeactivatableAuditableEntity<TId>`
-- `IAppendOnlyEntity`
-
-### Basic Entity
-
-Use `Entity<TId>` when the identifier type is part of your domain design:
-
-```csharp
-using sebkuw.Domain.Abstractions.Entities;
-
-public sealed class Product : Entity<int>
-{
-    public string Name { get; set; } = string.Empty;
-}
-```
-
-Use `GuidEntity` when your domain entity uses a `Guid` identifier:
-
-```csharp
-using sebkuw.Domain.Abstractions.Entities;
-
-public sealed class Customer : GuidEntity
-{
-    public string Email { get; set; } = string.Empty;
-}
-```
-
-### Auditable Entity
-
-Use `AuditableEntity<TId>` when an entity should expose creation and update metadata:
-
-```csharp
-using sebkuw.Domain.Abstractions.Auditing;
-
-public sealed class Invoice : AuditableEntity<long>
-{
-    public string Number { get; set; } = string.Empty;
-}
-```
-
-Use `AuditableGuidEntity` for the common `Guid` identifier case:
-
-```csharp
-using sebkuw.Domain.Abstractions.Auditing;
-
-public sealed class Order : AuditableGuidEntity
-{
-    public string Number { get; set; } = string.Empty;
-}
-```
-
-Use creation-only auditing for immutable history, and explicit deactivation for entities that must remain available to historical data:
-
-```csharp
-using sebkuw.Domain.Abstractions.Auditing;
-using sebkuw.Domain.Abstractions.Deactivation;
-using sebkuw.Domain.Abstractions.History;
-
-public sealed class PriceHistory : CreatedAuditableEntity<Guid>, IAppendOnlyEntity;
-
-public sealed class Product : DeactivatableAuditableEntity<Guid>;
-```
-
-### Notes
-
-- `CreatedBy` and `CreatedAt` represent required creation metadata.
-- `UpdatedBy` and `UpdatedAt` are nullable because new entities may not have been updated yet.
-- Audit values are intentionally simple so they can be filled by application services, EF Core interceptors, pipeline behaviors or other infrastructure code.
-
-## sebkuw.Cqrs.Abstractions
-
-### Purpose
-
-`sebkuw.Cqrs.Abstractions` defines contracts for commands, queries and handlers. The package does not depend on a mediator library, which keeps application contracts portable and easy to test.
-
-### Installation
-
-```bash
-dotnet add package sebkuw.Cqrs.Abstractions
-```
-
-### Included Types
-
-- `ICommand`
-- `ICommand<TResponse>`
-- `IQuery<TResponse>`
-- `ICommandHandler<TCommand>`
-- `ICommandHandler<TCommand, TResponse>`
-- `IQueryHandler<TQuery, TResponse>`
-
-### Commands
-
-Use `ICommand` for operations that do not return a value:
-
-```csharp
-using sebkuw.Cqrs.Abstractions;
-
-public sealed record DeleteUserCommand(Guid UserId) : ICommand;
-
-public sealed class DeleteUserCommandHandler
-    : ICommandHandler<DeleteUserCommand>
-{
-    public Task Handle(
-        DeleteUserCommand command,
-        CancellationToken cancellationToken)
-    {
-        return Task.CompletedTask;
-    }
-}
-```
-
-Use `ICommand<TResponse>` for operations that return a value:
-
-```csharp
-using sebkuw.Cqrs.Abstractions;
-
-public sealed record CreateUserCommand(string Email) : ICommand<Guid>;
-
-public sealed class CreateUserCommandHandler
-    : ICommandHandler<CreateUserCommand, Guid>
-{
-    public Task<Guid> Handle(
-        CreateUserCommand command,
-        CancellationToken cancellationToken)
-    {
-        return Task.FromResult(Guid.NewGuid());
-    }
-}
-```
-
-### Queries
-
-Use `IQuery<TResponse>` for read operations:
-
-```csharp
-using sebkuw.Cqrs.Abstractions;
-
-public sealed record GetUserByIdQuery(Guid UserId) : IQuery<UserDto?>;
-
-public sealed class GetUserByIdQueryHandler
-    : IQueryHandler<GetUserByIdQuery, UserDto?>
-{
-    public Task<UserDto?> Handle(
-        GetUserByIdQuery query,
-        CancellationToken cancellationToken)
-    {
-        return Task.FromResult<UserDto?>(null);
-    }
-}
-```
-
-### Notes
-
-- Commands and queries are marker contracts.
-- Handlers receive a `CancellationToken` by design.
-- The abstractions can be used with a custom dispatcher, a mediator, direct DI resolution or pipeline behaviors.
-
-## sebkuw.Cqrs
-
-### Purpose
-
-`sebkuw.Cqrs` registers CQRS handlers from selected assemblies into `Microsoft.Extensions.DependencyInjection`. It uses Scrutor for assembly scanning.
-
-### Installation
-
-```bash
-dotnet add package sebkuw.Cqrs
-```
-
-### Register One Assembly
-
-Use the shortcut when handlers live in one assembly:
-
-```csharp
-using sebkuw.Cqrs;
-
-builder.Services.AddCqrsFromAssemblyContaining<CreateUserCommandHandler>();
-```
-
-### Register Multiple Assemblies
-
-Use the options delegate when handlers are split across modules:
-
-```csharp
-using sebkuw.Cqrs;
-
-builder.Services.AddCqrs(options =>
-{
-    options.RegisterServicesFromAssemblyContaining<CreateUserCommandHandler>();
-    options.RegisterServicesFromAssemblyContaining<CreateOrderCommandHandler>();
-});
-```
-
-### What Gets Registered
-
-The scanner registers implementations of:
-
-- `ICommandHandler<TCommand>`
-- `ICommandHandler<TCommand, TResponse>`
-- `IQueryHandler<TQuery, TResponse>`
-
-Handlers are registered:
-
-- as implemented interfaces,
-- with scoped lifetime,
-- from explicitly configured assemblies,
-- including non-public handler classes.
-
-### Notes
-
-- `AddCqrs` throws when no assemblies are configured.
-- Register handlers in the application composition root, usually where `IServiceCollection` is configured.
-- Keep command and query definitions in application modules, then register those modules explicitly.
-
-## sebkuw.EntityFrameworkCore.Auditing
-
-### Purpose
-
-`sebkuw.EntityFrameworkCore.Auditing` fills audit metadata for EF Core entities during `SaveChanges` and `SaveChangesAsync`. It is built around an EF Core `SaveChangesInterceptor` and the auditing contracts from `sebkuw.Domain.Abstractions`.
-
-### Installation
-
-```bash
-dotnet add package sebkuw.EntityFrameworkCore.Auditing
-```
-
-### Included Types
-
-- `AuditSaveChangesInterceptor`
-- `EntityLifecycleInterceptor`
-- `HardDeleteNotAllowedException`
-- `AppendOnlyEntityModificationException`
-- `IDateTimeProvider`
-- `ICurrentUserProvider`
-- `SystemDateTimeProvider`
-- `AddEfCoreAuditing`
-
-### Provide Current User
-
-The package does not assume how your application identifies users. Provide an implementation of `ICurrentUserProvider` in your application layer or infrastructure layer:
-
-```csharp
-using sebkuw.EntityFrameworkCore.Auditing.Abstractions;
-
-public sealed class CurrentUserProvider : ICurrentUserProvider
-{
-    public string GetUserName()
-    {
-        return "system";
-    }
-}
-```
-
-### Register Auditing Services
-
-Register the current user provider and the auditing services in the composition root:
-
-```csharp
-using sebkuw.EntityFrameworkCore.Auditing.Abstractions;
-using sebkuw.EntityFrameworkCore.Auditing.Extensions;
-
-builder.Services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
-builder.Services.AddEfCoreAuditing();
-```
-
-### Attach the Interceptor to DbContext
-
-Resolve `AuditSaveChangesInterceptor` from DI and attach it to your EF Core context:
-
-```csharp
-using sebkuw.EntityFrameworkCore.Auditing.Interceptors;
-
-builder.Services.AddDbContext<AppDbContext>((serviceProvider, options) =>
-{
-    options
-        .UseSqlServer(connectionString)
-        .AddSebkuwAuditingInterceptors(serviceProvider);
-});
-```
-
-### What Gets Updated
-
-For entities implementing `ICreatedEntity`:
-
-- `CreatedBy` and `CreatedAt` are set when the entity is added.
-- `CreatedBy` and `CreatedAt` are protected from modification when the entity is updated.
-
-For entities implementing `IUpdatedEntity`:
-
-- `UpdatedBy` and `UpdatedAt` stay empty when the entity is first added.
-- `UpdatedBy` and `UpdatedAt` are set when the entity is modified.
-
-The lifecycle interceptor rejects physical deletion of `IHardDeleteProtected` entities and rejects updates and deletes of `IAppendOnlyEntity` records. Deactivation is an explicit domain update; no delete is silently converted and no global active-only query filter is installed.
-
-### Example Entity
-
-```csharp
-using sebkuw.Domain.Abstractions.Auditing;
-
-public sealed class Customer : AuditableGuidEntity
-{
-    public string Email { get; set; } = string.Empty;
-}
-```
-
-### Notes
-
-- `SystemDateTimeProvider` uses `TimeProvider.System.GetUtcNow()`.
-- You can replace `IDateTimeProvider` in tests or applications that need deterministic time.
-- The interceptor only touches tracked entities in `Added` or `Modified` state.
-
-## sebkuw.ExceptionProcessor
-
-### Purpose
-
-`sebkuw.ExceptionProcessor` converts exceptions into consistent JSON API responses. It includes a base exception contract for application-specific errors, ready-made exception types, NLog-based exception logging, a global exception middleware and a correlation ID middleware.
-
-### Installation
-
-```bash
-dotnet add package sebkuw.ExceptionProcessor
-```
-
-### Included Types
-
-- `BaseException`
-- `ExceptionResponse`
-- `IExceptionManager`
-- `ExceptionManager`
-- `IExceptionLogger`
-- `ExceptionLogger`
-- `GlobalExceptionMiddleware`
-- `TraceIdMiddleware`
-- built-in custom exceptions such as `ValidationException`, `ObjectNotFoundException`, `DatabaseException`, `TimeoutException` and `OperationFailedException`
-
-### Register Services
-
-Register the exception manager and logger in the application composition root:
-
-```csharp
-using sebkuw.ExceptionProcessor;
-using sebkuw.ExceptionProcessor.Loggers;
-
-builder.Services.AddScoped<IExceptionManager, ExceptionManager>();
-builder.Services.AddSingleton<IExceptionLogger, ExceptionLogger>();
-```
-
-Initialize the NLog logger from configuration during startup:
-
-```csharp
-using sebkuw.ExceptionProcessor.Loggers;
-
-ExceptionLogger.Initialize(builder.Configuration);
-```
-
-Example configuration:
-
-```json
-{
-  "Logging": {
-    "NLog": {
-      "LogFilePath": "logs/exceptions.log"
-    }
-  }
-}
-```
-
-### Add Middleware
-
-Add the correlation ID middleware before the global exception middleware:
-
-```csharp
-using sebkuw.ExceptionProcessor.Middlewares;
-
-app.UseMiddleware<TraceIdMiddleware>();
-app.UseMiddleware<GlobalExceptionMiddleware>();
-```
-
-`TraceIdMiddleware` reads `X-Correlation-ID` from the incoming request when it exists. Otherwise it creates a new ID. The value is stored in `HttpContext.Items["CorrelationId"]` and returned in the `X-Correlation-ID` response header.
-
-### Throw Custom Exceptions
-
-Use the built-in exceptions for common API failures:
-
-```csharp
-using sebkuw.ExceptionProcessor.Exceptions.Custom;
-
-throw new ObjectNotFoundException("User", userId);
-```
-
-The global middleware returns a response similar to:
-
-```json
-{
-  "code": "ObjectNotFound",
-  "httpCode": 404,
-  "mainText": "Object not found",
-  "description": "The requested User with ID 123 was not found.",
-  "timestamp": "2026-07-06T12:30:00.0000000Z",
-  "traceId": "0HN1GH8P91FD0:00000001"
-}
-```
-
-### Create Application-Specific Exceptions
-
-Derive from `BaseException` when an application needs its own error code and HTTP status:
-
-```csharp
-using sebkuw.ExceptionProcessor.Exceptions.Base;
-
-public sealed class DuplicateEmailException : BaseException
-{
-    public DuplicateEmailException(string email)
-        : base(
-            "DuplicateEmail",
-            409,
-            "Duplicate email",
-            $"The email '{email}' is already in use.")
-    {
-    }
-}
-```
-
-### Notes
-
-- Exceptions derived from `BaseException` keep their configured code, HTTP status, main text and description.
-- Unknown exceptions are returned as `UnhandledException` with HTTP 500.
-- `ExceptionResponse.Timestamp` is set in UTC when the response is created.
-- `GlobalExceptionMiddleware` writes JSON with camel-case property names and includes the correlation ID in both the response body and header.
-
-## sebkuw.ExportProcessor
-
-`sebkuw.ExportProcessor` streams CSV output from EF Core queries after applying `RequestDto` filters and sorting. Exports use an explicit column map; callers may select and order only mapped columns. Pagination can be ignored to export all matching rows or applied to export the current page.
-
-```csharp
-var map = new CsvExportMap<ProductExportRow>()
-    .Map("name", row => row.Name, header: "Product")
-    .Map("price", row => row.Price, header: "Price");
-
-await dbContext.Products.ExportCsvAsync(
-    response.Body,
-    request,
-    product => new ProductExportRow(product.Name, product.Price),
-    map,
-    new CsvExportOptions { Columns = ["name", "price"] },
-    cancellationToken);
-```
-
-See the [package documentation](src/sebkuw.ExportProcessor/README.md) for query scope, formatting, security, and endpoint integration details.
-
-## sebkuw.ImportProcessor
-
-`sebkuw.ImportProcessor` provides a reusable CSV import pipeline with streaming parsing, bounded concurrent mapping and validation, ordered incremental writes, configurable result retention, preview mode, detailed batch reports, and extension points for application-owned persistence and idempotency. It has no dependency on a domain model, ORM, or database.
-
-```csharp
-var map = new ImportMap<ProductRow>(() => new ProductRow())
-    .Map("sku", row => row.Sku)
-    .Map("price", row => row.Price)
-    .UseIdempotencyKey(row => row.Sku);
-
-var batch = await new ImportProcessor<ProductRow>(map, writer, idempotencyStore)
-    .ProcessAsync(
-        csvStream,
-        new ImportOptions
-        {
-            BatchSize = 1_000,
-            BufferCapacity = 2_000,
-            MaxDegreeOfParallelism = 4,
-            MaxRetainedRows = 100,
-        },
-        cancellationToken);
-```
-
-See the [package documentation](src/sebkuw.ImportProcessor/README.md) for mapping, validation, execution, and extension-point details.
-
-## sebkuw.QueryableProcessor
-
-### Purpose
-
-`sebkuw.QueryableProcessor` applies filtering, sorting, pagination and projection to `IQueryable<T>` sources. It is useful for API list endpoints that accept query options and should return consistent pagination metadata.
-
-### Installation
-
-```bash
-dotnet add package sebkuw.QueryableProcessor
-```
-
-### Included Types
-
-- `RequestDto`
-- `FilterCondition`
-- `FilterOperation`
-- `PaginationOptions`
-- `PaginationResponse<T>`
-- `ApplyFilters`
-- `ApplyRequest`
-- `SortBy`
-- `Paginate`
-- `SolveRequest`
-
-### Request Model
-
-Create a request with optional filters and sorting plus required pagination options:
-
-```csharp
-using sebkuw.QueryableProcessor.Enums;
-using sebkuw.QueryableProcessor.Models;
-
-var request = new RequestDto
-{
-    SortParam = "CreatedAt desc",
-    Filters =
-    [
-        new FilterCondition
-        {
-            PropertyPath = "Status",
-            Operation = FilterOperation.Equal,
-            Value = "Published"
-        },
-        new FilterCondition
-        {
-            PropertyPath = "Name",
-            Operation = FilterOperation.Contains,
-            Value = "api"
-        }
-    ],
-    PaginationOptions = new PaginationOptions(pageNumber: 1, pageSize: 20)
-};
-```
-
-### Process an EF Core Query
-
-Use `SolveRequest` to apply filters, sorting, pagination and projection in one call:
-
-```csharp
-using sebkuw.QueryableProcessor.Solvers;
-
-PaginationResponse<ArticleListItem> response = await dbContext.Articles
-    .SolveRequest(
-        request,
-        article => new ArticleListItem(
-            article.Id,
-            article.Title,
-            article.CreatedAt),
-        cancellationToken);
-```
-
-The response contains the page data plus `TotalItems`, `TotalPages`, `PageNumber`, `PageSize`, `HasNextPage` and `HasPreviousPage`.
-
-### Supported Filters
-
-`FilterOperation` supports:
-
-- `Equal`
-- `NotEqual`
-- `GreaterThan`
-- `LessThan`
-- `GreaterThanOrEqual`
-- `LessThanOrEqual`
-- `Contains`
-- `StartsWith`
-- `EndsWith`
-- `In`
-- `NotIn`
-
-String operations work on string properties. `In` and `NotIn` expect a collection value, for example `new[] { 1, 2, 3 }`.
-
-### Sorting
-
-Use the Angular-compatible suffix form:
-
-```csharp
-query = query.SortBy("Name asc");
-query = query.SortBy("Category.Name desc");
-```
-
-The legacy `asc_Name` and `desc_Category.Name` forms remain supported. Nested paths and camelCase frontend property names are accepted. If the sort parameter is empty or invalid, the original query is returned unchanged.
-
-### Notes
-
-- `PaginationOptions` defaults to page 1 and page size 10.
-- Page numbers are 1-based.
-- Page size is limited to 100.
-- `SolveRequest` counts matching items before pagination.
-- Filters are combined with logical `AND`.
-
-## Build
-
-```bash
-dotnet build sebkuw.BuildingBlocks.slnx
-```
-
-## Tests
-
-```bash
-dotnet test sebkuw.BuildingBlocks.slnx
-```
-
-The test projects cover:
-
-- domain entity contracts,
-- auditing contracts,
-- CQRS handler scanning,
-- scoped handler registration,
-- validation for missing CQRS assembly configuration,
-- EF Core auditing service registration,
-- EF Core creation and update audit behavior,
-- exception response mapping,
-- global exception middleware responses,
-- correlation ID middleware behavior,
-- dynamic query filtering, sorting and pagination,
-- full query request processing with EF Core InMemory.
-
-Coverage is collected with `coverlet.runsettings`. The repository quality gate requires at least 90% line coverage and 80% branch coverage for each production library.
 
 ## Publishing to GitHub Packages
 
@@ -718,18 +169,12 @@ After the first publication, grant the consumer repository access separately for
 
 The Meblicz workflow can then restore the private packages with its own workflow-scoped `GITHUB_TOKEN` and `packages: read`; no personal access token is needed. Keep credentials out of committed `NuGet.Config` files and logs.
 
-## Project Standards
+## Contributing and versioning
 
-- [.NET agent instructions](AGENTS.md)
-- [Cross-cutting development skill](.agents/skills/develop-dotnet-building-blocks/SKILL.md)
-- [Angular shared-components contract](docs/angular-shared-components-contract.md)
+Read [AGENTS.md](AGENTS.md) and the instructions for the affected library before changing code. Keep public API changes, tests, documentation, and changelog entries together. Dependencies use central version management and committed lock files; nullable checks, analyzers, and warnings as errors are enabled.
 
-The repository targets .NET 10 and C# 14, centralizes package versions, uses locked restore, treats warnings as errors, and admits only approved free open-source licenses. Every behavior change requires proportionate tests, package documentation, and an `Unreleased` changelog entry.
-
-## Changelog
-
-See the [repository changelog](CHANGELOG.md) for cross-cutting changes and each package README for its package-specific history.
+Versions follow Semantic Versioning per package. The `sebkuw.*` rename is a breaking migration for existing consumers: replace the previous package IDs and namespace imports, and use `AddSebkuwAuditingInterceptors()` for the auditing integration. Package-specific details are recorded in the [changelogs](CHANGELOG.md).
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+[MIT](LICENSE) — Copyright (c) 2026 Sebastian Wnorowski.
